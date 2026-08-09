@@ -1,0 +1,3 @@
+id	version	role	status	sha256	bytes	url
+rfc4231	2005-12	official-hmac-sha256-vectors	pinned	72178527ce93500e730bc8eb182b857e583096d652b64ece0879c52ba1df973b	17725	https://www.rfc-editor.org/rfc/rfc4231.txt
+rfc8032	2017-01	official-ed25519-vectors	pinned	ed63657ff389301282b169b0abde9b5dd2c7e4d524fdfa5da6ff3094fc93c4c3	103210	https://www.rfc-editor.org/rfc/rfc8032.txt
