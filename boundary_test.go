@@ -122,6 +122,47 @@ func TestVerifyRejectsResolverAndKeyLifecycleFailures(t *testing.T) {
 	}
 }
 
+func TestVerifyPreservesUnknownKeyPolicyThroughResolverLayers(t *testing.T) {
+	token, verifier := hmacFixture(t)
+	set, err := capability.NewKeySet([]capability.Key{{ID: "different-key", Verifier: verifier}})
+	if err != nil {
+		t.Fatalf("NewKeySet() error = %v", err)
+	}
+	bounded, err := capability.NewBoundedResolver(capability.BoundedResolverOptions{
+		Source: set, Timeout: time.Second,
+		AllowedAlgorithms: []capability.Algorithm{capability.HMACSHA256}, MaxKeyIDBytes: 32,
+	})
+	if err != nil {
+		t.Fatalf("NewBoundedResolver() error = %v", err)
+	}
+	mismatchSource := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
+		return capability.ResolvedKey{}, capability.ErrAlgorithmMismatch
+	})
+	boundedMismatch, err := capability.NewBoundedResolver(capability.BoundedResolverOptions{
+		Source: mismatchSource, Timeout: time.Second,
+		AllowedAlgorithms: []capability.Algorithm{capability.HMACSHA256}, MaxKeyIDBytes: 32,
+	})
+	if err != nil {
+		t.Fatalf("NewBoundedResolver(mismatch) error = %v", err)
+	}
+	options := capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
+	for name, test := range map[string]struct {
+		resolver capability.Resolver
+		want     error
+	}{
+		"key set unknown":         {resolver: set, want: capability.ErrUnknownKey},
+		"bounded unknown":         {resolver: bounded, want: capability.ErrUnknownKey},
+		"direct mismatch":         {resolver: mismatchSource, want: capability.ErrAlgorithmMismatch},
+		"bounded source mismatch": {resolver: boundedMismatch, want: capability.ErrAlgorithmMismatch},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := capability.Verify(context.Background(), token, test.resolver, options); !errors.Is(err, test.want) {
+				t.Fatalf("Verify() error = %v", err)
+			}
+		})
+	}
+}
+
 func TestGrantIsDefensiveAndRequiresEveryAuthorityDimension(t *testing.T) {
 	payload := validPayload()
 	payload.Bearer = false

@@ -161,7 +161,7 @@ func Verify(ctx context.Context, token string, resolver Resolver, options Verify
 	}
 	resolved, err := resolver.Resolve(ctx, parsed.Header.KeyID, parsed.Header.Algorithm)
 	if err != nil {
-		return Grant{}, redact(ErrKeyResolution, err)
+		return Grant{}, redactResolver(err)
 	}
 	if resolved.Verifier == nil {
 		return Grant{}, ErrUnknownKey

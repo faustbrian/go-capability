@@ -3,6 +3,7 @@ package capability_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -153,6 +154,36 @@ func TestBoundedResolverAcceptsExactMaximumKeyIDPolicy(t *testing.T) {
 	})
 	if err != nil || resolver == nil {
 		t.Fatalf("NewBoundedResolver(exact maximum) = %#v, %v", resolver, err)
+	}
+}
+
+func TestBoundedResolverObservesRotationRemovalWithoutCaching(t *testing.T) {
+	hmacVerifier, _ := capability.NewHMACSHA256Verifier([]byte("0123456789abcdef0123456789abcdef"))
+	var mu sync.RWMutex
+	current := capability.ResolvedKey{Verifier: hmacVerifier}
+	source := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
+		mu.RLock()
+		defer mu.RUnlock()
+		if current.Verifier == nil {
+			return capability.ResolvedKey{}, capability.ErrUnknownKey
+		}
+		return current, nil
+	})
+	resolver, err := capability.NewBoundedResolver(capability.BoundedResolverOptions{
+		Source: source, Timeout: time.Second, MaxKeyIDBytes: 16,
+		AllowedAlgorithms: []capability.Algorithm{capability.HMACSHA256},
+	})
+	if err != nil {
+		t.Fatalf("NewBoundedResolver() error = %v", err)
+	}
+	if _, err := resolver.Resolve(context.Background(), "old-key", capability.HMACSHA256); err != nil {
+		t.Fatalf("Resolve(overlap) error = %v", err)
+	}
+	mu.Lock()
+	current = capability.ResolvedKey{}
+	mu.Unlock()
+	if _, err := resolver.Resolve(context.Background(), "old-key", capability.HMACSHA256); !errors.Is(err, capability.ErrUnknownKey) {
+		t.Fatalf("Resolve(after removal) error = %v", err)
 	}
 }
 

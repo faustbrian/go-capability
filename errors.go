@@ -75,3 +75,14 @@ func redact(kind, cause error) error {
 		return kind
 	}
 }
+
+func redactResolver(cause error) error {
+	switch {
+	case errors.Is(cause, ErrUnknownKey):
+		return ErrUnknownKey
+	case errors.Is(cause, ErrAlgorithmMismatch):
+		return ErrAlgorithmMismatch
+	default:
+		return redact(ErrKeyResolution, cause)
+	}
+}

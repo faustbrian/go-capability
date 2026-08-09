@@ -36,10 +36,20 @@ consistency, propagation, caching, outage behavior, and the maximum interval in
 which a revoked capability might still be accepted. This module never labels
 eventual revocation as instantaneous.
 
+The memory checker has a zero stale window for later reads in the same process
+after a revocation method returns; other processes never observe that state and
+therefore cannot use it for cluster revocation. For an external checker with a
+declared propagation-and-cache bound `S`, the remaining stale-acceptance window
+at revocation time is at most the smaller of `S` and the capability's remaining
+`exp + skew` verifier window. A deployment that cannot state and exercise a
+finite `S` must not depend on revocation for its acceptance bound.
+
 ## Key failures
 
 Unknown, disabled, revoked, not-yet-active, expired, and algorithm-mismatched
 keys are distinct policy failures. Remote resolution is bounded by caller
 context, key-ID size, algorithm allowlist, and the configured adapter timeout.
-The remote source must honor cancellation and must not return secret material
-in its errors.
+`BoundedResolver` does not cache and preserves trusted unknown-key and
+algorithm-mismatch categories. The remote source must honor cancellation, must
+bound any cache staleness it introduces, and must not return secret material in
+its errors.

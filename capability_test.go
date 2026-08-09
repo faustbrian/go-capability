@@ -148,6 +148,41 @@ func TestVerifyRejectsTamperingDowngradeAndInactiveKeys(t *testing.T) {
 	}
 }
 
+func TestVerifyKeyRotationOverlapRemovalAndCompromiseResponse(t *testing.T) {
+	oldKey := []byte("0123456789abcdef0123456789abcdef")
+	newKey := []byte("abcdef0123456789abcdef0123456789")
+	oldSigner, _ := capability.NewHMACSHA256Signer("old", oldKey)
+	newSigner, _ := capability.NewHMACSHA256Signer("new", newKey)
+	oldVerifier, _ := capability.NewHMACSHA256Verifier(oldKey)
+	newVerifier, _ := capability.NewHMACSHA256Verifier(newKey)
+	oldToken, _ := capability.Issue(context.Background(), validPayload(), oldSigner, capability.DefaultLimits())
+	newToken, _ := capability.Issue(context.Background(), validPayload(), newSigner, capability.DefaultLimits())
+	options := capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
+
+	overlap, _ := capability.NewKeySet([]capability.Key{
+		{ID: "old", Verifier: oldVerifier}, {ID: "new", Verifier: newVerifier},
+	})
+	for _, token := range []string{oldToken, newToken} {
+		if _, err := capability.Verify(context.Background(), token, overlap, options); err != nil {
+			t.Fatalf("Verify(overlap) error = %v", err)
+		}
+	}
+
+	removed, _ := capability.NewKeySet([]capability.Key{{ID: "new", Verifier: newVerifier}})
+	if _, err := capability.Verify(context.Background(), oldToken, removed, options); !errors.Is(err, capability.ErrUnknownKey) {
+		t.Fatalf("Verify(removed old key) error = %v", err)
+	}
+	revoked, _ := capability.NewKeySet([]capability.Key{
+		{ID: "old", Verifier: oldVerifier, Revoked: true}, {ID: "new", Verifier: newVerifier},
+	})
+	if _, err := capability.Verify(context.Background(), oldToken, revoked, options); !errors.Is(err, capability.ErrKeyRevoked) {
+		t.Fatalf("Verify(revoked old key) error = %v", err)
+	}
+	if _, err := capability.Verify(context.Background(), newToken, revoked, options); err != nil {
+		t.Fatalf("Verify(new key after compromise response) error = %v", err)
+	}
+}
+
 func TestVerifyEd25519AndTimeBoundaries(t *testing.T) {
 	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {

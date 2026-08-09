@@ -15,6 +15,9 @@
   `context.Canceled` or `context.DeadlineExceeded` classification. Arbitrary
   signer, verifier, resolver, store, and body-digest causes are not retained in
   the returned error graph because their diagnostics may contain secrets.
+- Trusted resolver policy failures preserve the stable `ErrUnknownKey` and
+  `ErrAlgorithmMismatch` categories through bounded resolver layers without
+  retaining a resolver's arbitrary diagnostic error.
 
 The reviewed surface consists of payload version 1, signed-URL profiles, the
 method/scheme/authority/path/query/body-digest covered components,
@@ -38,14 +41,21 @@ and reconcile through an idempotency or transactional boundary. Valkey failover
 durability and revocation propagation must be stated by the deployment; the
 library makes no instant-global or exactly-once claim.
 
-The live adapter suite installs the PostgreSQL migration and proves a consumed
-record survives database-client replacement. It also proves a Valkey record
-survives client replacement and remains exhausted. Deterministic fault adapters
+The live adapter suite installs the PostgreSQL migration and proves consumed
+records survive both database-client replacement and abrupt caller-process
+exit. It proves the same boundaries for Valkey. Deterministic fault adapters
 exercise begin, read, insert, update, cleanup, commit, cancellation, malformed
-reply, retry-race, and connection-loss outcomes. These are client/process
-recreation and failover-boundary exercises, not a claim that an operator's
-PostgreSQL replication or Valkey persistence policy preserves acknowledged
-writes. Replica promotion and data-loss windows remain deployment-owned.
+reply, retry-race, and connection-loss outcomes. These are caller-process and
+client failover-boundary exercises, not a claim that an operator's PostgreSQL
+replication or Valkey persistence policy preserves acknowledged writes. Replica
+promotion and data-loss windows remain deployment-owned and require exercises
+against the exact production topology before adoption.
+
+`BoundedResolver` performs no caching and consults its source on every lookup,
+so key removal or compromise state is visible as soon as the source returns it.
+If the source caches keys, that cache owns its finite stale-acceptance bound and
+must not extend an old key beyond its activation interval or the deployment's
+documented compromise-response objective.
 
 `caphttp` is tested in an explicit authentication, body-limit, capability,
 authorization, tenancy, correlation, audit, and application sequence. It uses

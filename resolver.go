@@ -111,7 +111,7 @@ func (resolver *BoundedResolver) Resolve(ctx context.Context, keyID string, algo
 	defer cancel()
 	resolved, err := resolver.source.Resolve(lookupContext, keyID, algorithm)
 	if err != nil {
-		return ResolvedKey{}, redact(ErrKeyResolution, err)
+		return ResolvedKey{}, redactResolver(err)
 	}
 	if resolved.Verifier == nil {
 		return ResolvedKey{}, ErrUnknownKey

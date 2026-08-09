@@ -27,3 +27,11 @@ the module follows semantic versioning.
   application authorization and consumption visible.
 - Threat model, protocol, proxy, replay, revocation, migration, adoption,
   failure-mode, and FAQ documentation.
+
+### Changed
+
+- Verification now preserves trusted unknown-key and algorithm-mismatch policy
+  failures through bounded resolver layers while continuing to redact private
+  resolver diagnostics.
+- Durable replay integration now proves acknowledged consumption survives an
+  abrupt caller-process exit in both PostgreSQL and Valkey deployments.
