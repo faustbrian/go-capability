@@ -1,5 +1,10 @@
 # Protocol and threat model
 
+Material interpretations and package-owned protocol choices are indexed in the
+[specification decision register](specification-decisions.md). Pinned source
+versions and digests are recorded in the
+[specification manifest](../specification/manifest.tsv).
+
 ## Threat model
 
 A capability is a bearer secret unless `sub` binds it to an independently

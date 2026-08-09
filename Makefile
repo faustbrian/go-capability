@@ -39,7 +39,7 @@ api:
 	../../scripts/check-api-baseline.sh pkg/capability
 
 conformance:
-	GOWORK=off $(GO) test ./ -run 'RFC4231|RFC8032|PythonHMACGolden' -count=1
+	./scripts/check-conformance.sh
 
 interoperability:
 	python3 ./scripts/check-interoperability.py

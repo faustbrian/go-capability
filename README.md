@@ -141,6 +141,8 @@ clock, failure, proxy, and deployment semantics.
 ## Documentation
 
 - [Protocol and threat model](docs/protocol.md)
+- [Specification decisions](docs/specification-decisions.md)
+- [Conformance](docs/conformance.md)
 - [API reference](docs/api.md)
 - [Deployment profiles](docs/deployment-profiles.md)
 - [Replay, revocation, and failure modes](docs/replay-and-revocation.md)

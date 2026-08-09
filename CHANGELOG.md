@@ -7,6 +7,10 @@ the module follows semantic versioning.
 
 ### Added
 
+- Auditable capability-v1 specification decisions, expanded RFC provenance,
+  and one conformance gate linking every protocol choice to executable
+  evidence.
+
 - Canonical versioned capability payloads with explicit issuer, audience,
   subject or bearer mode, resource, operation, time, ID, tenant, correlation,
   bounded use, and caveat semantics.

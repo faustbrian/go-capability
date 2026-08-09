@@ -1,3 +1,8 @@
 id	version	role	status	sha256	bytes	url
+rfc2104	1997-02	hmac-construction	pinned	64d5245a9101929025336e470e3737f118704001249d503c85a86e19fe9fbb01	22297	https://www.rfc-editor.org/rfc/rfc2104.txt
 rfc4231	2005-12	official-hmac-sha256-vectors	pinned	72178527ce93500e730bc8eb182b857e583096d652b64ece0879c52ba1df973b	17725	https://www.rfc-editor.org/rfc/rfc4231.txt
+rfc3986	2005-01	uri-syntax-and-resolution	pinned	3102dae4b68cebe40337730312fcb612297b8928547267e8b3d1ee6002b2d683	141811	https://www.rfc-editor.org/rfc/rfc3986.txt
+rfc4648	2006-10	base64url-encoding	pinned	84e14418f795d503be5f34bf23ce4ebaa119e9ec7c9f667d8caeb111385b178f	35491	https://www.rfc-editor.org/rfc/rfc4648.txt
 rfc8032	2017-01	official-ed25519-vectors	pinned	ed63657ff389301282b169b0abde9b5dd2c7e4d524fdfa5da6ff3094fc93c4c3	103210	https://www.rfc-editor.org/rfc/rfc8032.txt
+rfc8259	2017-12	json-data-interchange	pinned	61a5378f4255c720beb2a4b4a63b29540147c140f36988bf086291989b4cd2d7	28360	https://www.rfc-editor.org/rfc/rfc8259.txt
+rfc9110	2022-06	http-semantics	pinned	21c1cdce6ab0e5509b04d84a28000836c7a087cf786efe6f04877ebfff47232a	502941	https://www.rfc-editor.org/rfc/rfc9110.txt
