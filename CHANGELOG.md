@@ -5,6 +5,10 @@ the module follows semantic versioning.
 
 ## [Unreleased]
 
+### Documentation
+
+- Link the package README to the repository-wide Golib documentation portal.
+
 ### Added
 
 - Auditable capability-v1 specification decisions, expanded RFC provenance,
