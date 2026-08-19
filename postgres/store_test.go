@@ -84,7 +84,11 @@ func TestStorePropagatesCommitAndCancellationFailures(t *testing.T) {
 }
 
 func TestStorePropagatesTransactionFailuresAndRetriesInsertRaces(t *testing.T) {
-	request := capability.Consumption{CapabilityID: "cap-fault", MaxUses: 2, ExpiresAt: time.Now().Add(time.Hour)}
+	request := capability.Consumption{
+		CapabilityID: "cap-fault",
+		MaxUses:      2,
+		ExpiresAt:    time.Unix(2_000_000_000, 123_456_789).UTC(),
+	}
 	backend := newFakeBackend()
 	backend.beginErr = errors.New("begin")
 	if _, err := newStore(backend).Consume(context.Background(), request); !errors.Is(err, backend.beginErr) {

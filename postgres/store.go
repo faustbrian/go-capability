@@ -107,7 +107,8 @@ func (store *ConsumptionStore) consumeOnce(ctx context.Context, request capabili
 		}
 		return capability.ConsumptionResult{Use: 1, Remaining: request.MaxUses - 1}, false, nil
 	}
-	if record.maxUses != request.MaxUses || !record.expiresAt.Equal(request.ExpiresAt) {
+	if record.maxUses != request.MaxUses ||
+		!record.expiresAt.Truncate(time.Microsecond).Equal(request.ExpiresAt) {
 		_ = tx.Rollback()
 		return capability.ConsumptionResult{}, false, capability.ErrReplayConflict
 	}
