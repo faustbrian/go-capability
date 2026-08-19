@@ -215,7 +215,11 @@ func TestStoreValidatesConstructorAndConsumption(t *testing.T) {
 }
 
 func TestConsumeOnceDistinguishesMissingAndExistingRows(t *testing.T) {
-	request := capability.Consumption{CapabilityID: "missing", MaxUses: 2, ExpiresAt: time.Now().Add(time.Hour)}
+	request := capability.Consumption{
+		CapabilityID: "missing",
+		MaxUses:      2,
+		ExpiresAt:    time.Unix(2_000_000_000, 987_654_321).UTC(),
+	}
 	backend := newFakeBackend()
 	result, retry, err := newStore(backend).consumeOnce(context.Background(), request)
 	if err != nil || retry || result.Use != 1 || result.Remaining != 1 {

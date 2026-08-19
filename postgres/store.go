@@ -56,9 +56,6 @@ func (store *ConsumptionStore) Consume(ctx context.Context, request capability.C
 	if err := validateRequest(ctx, request); err != nil {
 		return capability.ConsumptionResult{}, err
 	}
-	// PostgreSQL timestamps have microsecond precision. Normalize before both
-	// persistence and replay comparison so a reloaded record retains its identity.
-	request.ExpiresAt = request.ExpiresAt.Truncate(time.Microsecond)
 	for range maxInsertRetries {
 		result, retry, err := store.consumeOnce(ctx, request)
 		if err != nil || !retry {
@@ -69,6 +66,9 @@ func (store *ConsumptionStore) Consume(ctx context.Context, request capability.C
 }
 
 func (store *ConsumptionStore) consumeOnce(ctx context.Context, request capability.Consumption) (capability.ConsumptionResult, bool, error) {
+	// PostgreSQL timestamps have microsecond precision. Normalize every attempt
+	// before persistence and replay comparison so reloaded state keeps its identity.
+	request.ExpiresAt = request.ExpiresAt.Truncate(time.Microsecond)
 	tx, err := store.database.begin(ctx)
 	if err == nil {
 		defer func() { _ = tx.Rollback() }()
