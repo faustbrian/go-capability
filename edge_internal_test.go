@@ -160,6 +160,8 @@ func TestURLCanonicalizerRejectsInvalidProfilesAuthoritiesPathsAndQueries(t *tes
 	}
 	profiles := []URLProfile{
 		{},
+		{SignatureParameter: "cap", AllowRelative: true},
+		{Name: "profile", AllowRelative: true},
 		{Name: "profile", SignatureParameter: "cap"},
 		{Name: "profile", SignatureParameter: "cap", AllowRelative: true, AllowedAuthorities: []string{"example.com"}},
 		{Name: "profile", SignatureParameter: "cap", AllowedSchemes: []string{"ftp"}, AllowedAuthorities: []string{"example.com"}},

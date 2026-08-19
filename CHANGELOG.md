@@ -38,6 +38,8 @@ the module follows semantic versioning.
 
 ### Changed
 
+- Invalid-profile verification now isolates every required URL-profile field,
+  preventing logical-condition mutations from surviving through timeouts.
 - Verification now preserves trusted unknown-key and algorithm-mismatch policy
   failures through bounded resolver layers while continuing to redact private
   resolver diagnostics.
