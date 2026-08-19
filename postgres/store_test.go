@@ -226,6 +226,28 @@ func TestConsumeOnceDistinguishesMissingAndExistingRows(t *testing.T) {
 	}
 }
 
+func TestConsumeNormalizesExpiryToPostgreSQLPrecision(t *testing.T) {
+	request := capability.Consumption{
+		CapabilityID: "postgres-precision",
+		MaxUses:      2,
+		ExpiresAt:    time.Unix(1_700_000_000, 123_456_789).UTC(),
+	}
+	backend := newFakeBackend()
+	backend.records[request.CapabilityID] = fakeRecord{
+		uses:      1,
+		maxUses:   request.MaxUses,
+		expiresAt: request.ExpiresAt.Truncate(time.Microsecond),
+	}
+
+	result, err := newStore(backend).Consume(context.Background(), request)
+	if err != nil || result.Use != 2 || result.Remaining != 0 {
+		t.Fatalf("Consume() = %#v, %v", result, err)
+	}
+	if stored := backend.records[request.CapabilityID].expiresAt; !stored.Equal(request.ExpiresAt.Truncate(time.Microsecond)) {
+		t.Fatalf("stored expiry = %v", stored)
+	}
+}
+
 func TestDatabaseSQLAdapterExecutesRowsResultsAndTransactions(t *testing.T) {
 	state := &stubSQLState{queryValues: []driver.Value{int64(1), int64(2), time.Now(), false}, execRows: 1}
 	database := openStubDatabase(t, state)
