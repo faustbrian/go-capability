@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/faustbrian/golib/pkg/capability"
+	"github.com/faustbrian/go-capability"
 )
 
 type issuerValue struct{ issuer, value string }

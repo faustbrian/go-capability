@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/golib/pkg/capability"
-	capvalkey "github.com/faustbrian/golib/pkg/capability/valkey"
+	"github.com/faustbrian/go-capability"
+	capvalkey "github.com/faustbrian/go-capability/valkey"
 )
 
 func TestStoreConsumesAtomicallyThroughOneDeclaredValkeyKey(t *testing.T) {

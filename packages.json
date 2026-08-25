@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "repository": "github.com/faustbrian/go-capability",
+  "packages": [
+    {
+      "module_directory": ".",
+      "directory": ".",
+      "name": "capability",
+      "import_path": "github.com/faustbrian/go-capability",
+      "kind": "public",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
+    },
+    {
+      "module_directory": ".",
+      "directory": "caphttp",
+      "name": "caphttp",
+      "import_path": "github.com/faustbrian/go-capability/caphttp",
+      "kind": "public",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
+    },
+    {
+      "module_directory": ".",
+      "directory": "memory",
+      "name": "memory",
+      "import_path": "github.com/faustbrian/go-capability/memory",
+      "kind": "public",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
+    },
+    {
+      "module_directory": ".",
+      "directory": "postgres",
+      "name": "postgres",
+      "import_path": "github.com/faustbrian/go-capability/postgres",
+      "kind": "public",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
+    },
+    {
+      "module_directory": ".",
+      "directory": "valkey",
+      "name": "valkey",
+      "import_path": "github.com/faustbrian/go-capability/valkey",
+      "kind": "public",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
+    }
+  ]
+}

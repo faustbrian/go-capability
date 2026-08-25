@@ -12,8 +12,8 @@ trap cleanup EXIT HUP INT TERM
 cd "${consumer}"
 GOWORK=off go mod init example.com/capability-consumer >/dev/null
 GOWORK=off go mod edit -go=1.26.6 \
-    -require=github.com/faustbrian/golib/pkg/capability@v0.0.0 \
-    -replace="github.com/faustbrian/golib/pkg/capability=${module_directory}"
+    -require=github.com/faustbrian/go-capability@v0.0.0 \
+    -replace="github.com/faustbrian/go-capability=${module_directory}"
 
 cat > consumer_test.go <<'EOF'
 package consumer_test
@@ -23,11 +23,11 @@ import (
     "testing"
     "time"
 
-    "github.com/faustbrian/golib/pkg/capability"
-    "github.com/faustbrian/golib/pkg/capability/caphttp"
-    "github.com/faustbrian/golib/pkg/capability/memory"
-    "github.com/faustbrian/golib/pkg/capability/postgres"
-    "github.com/faustbrian/golib/pkg/capability/valkey"
+    "github.com/faustbrian/go-capability"
+    "github.com/faustbrian/go-capability/caphttp"
+    "github.com/faustbrian/go-capability/memory"
+    "github.com/faustbrian/go-capability/postgres"
+    "github.com/faustbrian/go-capability/valkey"
 )
 
 var _ capability.ConsumptionStore = (*memory.ConsumptionStore)(nil)

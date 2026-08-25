@@ -9,7 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/faustbrian/golib/pkg/capability"
+	"github.com/faustbrian/go-capability"
 )
 
 const maxInsertRetries = 3

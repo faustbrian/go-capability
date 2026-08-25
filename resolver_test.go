@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/golib/pkg/capability"
+	"github.com/faustbrian/go-capability"
 )
 
 func TestKeySetBindsKeyIDsToOneAlgorithmAndLifecycle(t *testing.T) {

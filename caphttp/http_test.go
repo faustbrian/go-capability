@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/golib/pkg/capability"
-	"github.com/faustbrian/golib/pkg/capability/caphttp"
+	"github.com/faustbrian/go-capability"
+	"github.com/faustbrian/go-capability/caphttp"
 )
 
 var now = time.Date(2026, 8, 9, 12, 0, 0, 0, time.UTC)

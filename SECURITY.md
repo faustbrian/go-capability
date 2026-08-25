@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-Before v1, pin an exact capability module version and review every upgrade.
-After v1, only versions explicitly listed in repository release notes are
+Pin an exact capability module version and review every upgrade. Only versions
+explicitly listed in repository release notes are
 supported.
 
 ## Reporting

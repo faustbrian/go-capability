@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/golib/pkg/capability"
+	"github.com/faustbrian/go-capability"
 )
 
 func FuzzParseNeverAcceptsTwoPayloadRepresentations(f *testing.F) {

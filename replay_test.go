@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/golib/pkg/capability"
-	capmemory "github.com/faustbrian/golib/pkg/capability/memory"
+	"github.com/faustbrian/go-capability"
+	capmemory "github.com/faustbrian/go-capability/memory"
 )
 
 func TestMemoryConsumptionIsAtomicAtTheUseLimit(t *testing.T) {

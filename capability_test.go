@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/golib/pkg/capability"
+	"github.com/faustbrian/go-capability"
 )
 
 var testNow = time.Date(2026, 8, 9, 12, 0, 0, 0, time.UTC)

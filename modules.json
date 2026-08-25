@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "repository": "github.com/faustbrian/go-capability",
+  "go_version": "1.26.6",
+  "modules": [
+    {
+      "directory": ".",
+      "module_path": "github.com/faustbrian/go-capability",
+      "go_version": "1.26.6",
+      "packages": [
+        {
+          "module_directory": ".",
+          "directory": ".",
+          "name": "capability",
+          "import_path": "github.com/faustbrian/go-capability",
+          "kind": "public",
+          "production": true,
+          "executable": true,
+          "coverage_required": true,
+          "build_required": true,
+          "build_tags": []
+        },
+        {
+          "module_directory": ".",
+          "directory": "caphttp",
+          "name": "caphttp",
+          "import_path": "github.com/faustbrian/go-capability/caphttp",
+          "kind": "public",
+          "production": true,
+          "executable": true,
+          "coverage_required": true,
+          "build_required": true,
+          "build_tags": []
+        },
+        {
+          "module_directory": ".",
+          "directory": "memory",
+          "name": "memory",
+          "import_path": "github.com/faustbrian/go-capability/memory",
+          "kind": "public",
+          "production": true,
+          "executable": true,
+          "coverage_required": true,
+          "build_required": true,
+          "build_tags": []
+        },
+        {
+          "module_directory": ".",
+          "directory": "postgres",
+          "name": "postgres",
+          "import_path": "github.com/faustbrian/go-capability/postgres",
+          "kind": "public",
+          "production": true,
+          "executable": true,
+          "coverage_required": true,
+          "build_required": true,
+          "build_tags": []
+        },
+        {
+          "module_directory": ".",
+          "directory": "valkey",
+          "name": "valkey",
+          "import_path": "github.com/faustbrian/go-capability/valkey",
+          "kind": "public",
+          "production": true,
+          "executable": true,
+          "coverage_required": true,
+          "build_required": true,
+          "build_tags": []
+        }
+      ],
+      "purpose": "`capability` issues and verifies narrowly scoped, tamper-evident, expiring Go capabilities and signed URLs. It is designed for downloads, uploads, invitations, callbacks, one-time actions, delegated access, and service-to-service handoffs.",
+      "lifecycle": "stable",
+      "kind": "public library",
+      "releasable": true,
+      "family": "service-edge",
+      "family_label": "Service Edge",
+      "family_description": "Request-edge policy, identity, access decisions, routing, middleware, and process lifecycle.",
+      "family_order": 2,
+      "version": "v1.0.0",
+      "tag_prefix": "v",
+      "owned_dependencies": [],
+      "reverse_owned_dependencies": [
+        "github.com/faustbrian/go-service/integration/reference-http"
+      ],
+      "external_runtime_dependencies": [
+        "github.com/jackc/pgx/v5",
+        "github.com/valkey-io/valkey-go"
+      ],
+      "required_services": [
+        "postgresql",
+        "valkey"
+      ],
+      "build_tags": [],
+      "test_tags": [
+        "integration"
+      ],
+      "interoperability_tools": [
+        "Python 3 standard-library HMAC implementation"
+      ],
+      "specifications": [
+        "RFC 2104 HMAC",
+        "RFC 4231 HMAC-SHA-256 vectors",
+        "RFC 3986 URI Generic Syntax",
+        "RFC 4648 Base-N Encodings",
+        "RFC 8032 Ed25519",
+        "RFC 8259 JSON",
+        "RFC 9110 HTTP Semantics"
+      ],
+      "conformance_corpora": [
+        "RFC 4231 test case 6",
+        "RFC 8032 section 7.1 test 1",
+        "Capability v1 canonical, URL, replay, revocation, and HTTP decision evidence"
+      ],
+      "provenance": [
+        "specification/manifest.tsv"
+      ],
+      "goal_files": [
+        ".ai/GOAL.md",
+        ".ai/GOAL_HARDEN.md"
+      ],
+      "goal_status": "implementation-evidence-inventoried",
+      "goal_evidence": [
+        {
+          "file": ".ai/GOAL.md",
+          "requirements_sha256": "48a694e34decc3f9cdad875ddddaceb673d02dd3b7caeb03011a95636e5012fc",
+          "implementation_evidence": [
+            "CHANGELOG.md",
+            "README.md",
+            "docs/api.md"
+          ],
+          "verification_gates": [
+            "format-check",
+            "tidy-check",
+            "safety",
+            "vet",
+            "test",
+            "race",
+            "coverage",
+            "lint",
+            "staticcheck",
+            "vulnerability",
+            "secrets",
+            "licenses",
+            "sbom",
+            "fuzz",
+            "mutation",
+            "nilaway",
+            "docs",
+            "api",
+            "conformance",
+            "interoperability",
+            "benchmark"
+          ],
+          "implementation_status": "implemented-requires-fresh-verification"
+        },
+        {
+          "file": ".ai/GOAL_HARDEN.md",
+          "requirements_sha256": "78b58fbcabfa7ed873b87b005d9fb5d6111b45cd6ff189373581d61a0ed079e5",
+          "implementation_evidence": [
+            "CHANGELOG.md",
+            "README.md",
+            "docs/api.md"
+          ],
+          "verification_gates": [
+            "format-check",
+            "tidy-check",
+            "safety",
+            "vet",
+            "test",
+            "race",
+            "coverage",
+            "lint",
+            "staticcheck",
+            "vulnerability",
+            "secrets",
+            "licenses",
+            "sbom",
+            "fuzz",
+            "mutation",
+            "nilaway",
+            "docs",
+            "api",
+            "conformance",
+            "interoperability",
+            "benchmark"
+          ],
+          "implementation_status": "implemented-requires-fresh-verification"
+        }
+      ],
+      "gates": {
+        "api_compatibility": true,
+        "benchmarks": true,
+        "conformance": true,
+        "coverage": true,
+        "documentation": true,
+        "fuzz": true,
+        "lint": true,
+        "mutation": true,
+        "race": true,
+        "security": true,
+        "tests": true
+      }
+    }
+  ]
+}

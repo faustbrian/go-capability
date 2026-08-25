@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/faustbrian/golib/pkg/capability"
+	"github.com/faustbrian/go-capability"
 )
 
 // Clock supplies request-time wall clock values.

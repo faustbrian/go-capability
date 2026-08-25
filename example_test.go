@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/faustbrian/golib/pkg/capability"
+	"github.com/faustbrian/go-capability"
 )
 
 func ExampleIssue() {

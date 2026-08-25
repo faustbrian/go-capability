@@ -5,6 +5,8 @@ the module follows semantic versioning.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-25
+
 ### Documentation
 
 - Link the package README to the repository-wide Golib documentation portal.
@@ -38,6 +40,7 @@ the module follows semantic versioning.
 
 ### Changed
 
+- Publish the module from its standalone `github.com/faustbrian/go-capability` identity while preserving its documented API and behavior.
 - Invalid-profile verification now isolates every required URL-profile field,
   preventing logical-condition mutations from surviving through timeouts.
 - Verification now preserves trusted unknown-key and algorithm-mismatch policy
@@ -45,3 +48,6 @@ the module follows semantic versioning.
   resolver diagnostics.
 - Durable replay integration now proves acknowledged consumption survives an
   abrupt caller-process exit in both PostgreSQL and Valkey deployments.
+
+[Unreleased]: https://github.com/faustbrian/go-capability/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/faustbrian/go-capability/releases/tag/v1.0.0

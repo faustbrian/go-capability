@@ -1,4 +1,4 @@
-module github.com/faustbrian/golib/pkg/capability
+module github.com/faustbrian/go-capability
 
 go 1.26.6
 
