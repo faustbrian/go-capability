@@ -18,7 +18,7 @@ test:
 	GOWORK=off $(GO) test ./... -count=1
 
 coverage:
-	../../scripts/check-coverage.sh .
+	./.golib/scripts/check-coverage.sh .
 
 race:
 	GOWORK=off $(GO) test -race ./... -count=1
@@ -27,7 +27,7 @@ fuzz:
 	FUZZ_TIME=$(FUZZ_TIME) ./scripts/check-fuzz.sh
 
 mutation:
-	../../scripts/check-mutation.sh .
+	./.golib/scripts/check-mutation.sh .
 
 benchmark:
 	GOWORK=off $(GO) test ./... -run '^$$' -bench . -benchmem -benchtime=$(BENCH_TIME)
@@ -36,7 +36,7 @@ docs:
 	GOWORK=off $(GO) test ./... -run '^Example' -count=1
 
 api:
-	../../scripts/check-api-baseline.sh .
+	./.golib/scripts/check-api-baseline.sh .
 
 conformance:
 	./scripts/check-conformance.sh
