@@ -5,6 +5,8 @@ the module follows semantic versioning.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-25
+
 ### Changed
 
 - Exclude intentional nested modules from root local-proxy archives so local,
@@ -21,8 +23,6 @@ the module follows semantic versioning.
 - Harden standalone documentation validation with deterministic spelling and
   link checks, package-specific documentation gates, and repository-local
   contributor guidance.
-
-## [1.0.0] - 2026-08-25
 
 ### Documentation
 
