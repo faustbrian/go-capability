@@ -5,6 +5,10 @@ the module follows semantic versioning.
 
 ## [Unreleased]
 
+### Documentation
+
+- Replace the archived monorepo link with package-owned documentation.
+
 ## [1.0.0] - 2026-08-25
 
 ### Changed
