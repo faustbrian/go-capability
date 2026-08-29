@@ -131,40 +131,15 @@ or metrics.
 
 ## Canonical v1 contract
 
-- Tokens are `cap1.<header>.<payload>.<signature>` using unpadded base64url.
-- The protected header is canonical JSON containing version, type, algorithm,
-  and key ID. The algorithm is checked against the trusted resolved verifier.
-- Payload JSON uses a fixed field order and Unix seconds. Audiences are sorted
-  and unique. Caveat object keys use Go's deterministic JSON map ordering.
-- Missing optional strings and empty caveats are absent. `bearer` is present
-  only when true; `sub` and `bearer` are mutually exclusive. `max_uses` is
-  absent when reusable.
-- UTF-8 is preserved byte-for-byte and is never normalized. NFC and NFD spellings
-  therefore identify different authority strings. Control characters are
-  rejected.
-- Parser limits bound token size, field size, audiences, caveats, lifetime, and
-  maximum use count before authority is returned.
-
-See [protocol and threat model](docs/protocol.md) for the complete field, URL,
-clock, failure, proxy, and deployment semantics.
+Tokens use canonical JSON, unpadded base64url, explicit algorithms and key IDs,
+bounded parsing, and byte-preserving UTF-8 semantics. See the
+[protocol and threat model](docs/protocol.md) for the complete wire contract.
 
 ## Documentation
 
-- [Protocol and threat model](docs/protocol.md)
-- [Specification decisions](docs/specification-decisions.md)
-- [Conformance](docs/conformance.md)
-- [API reference](docs/api.md)
-- [Deployment profiles](docs/deployment-profiles.md)
-- [Replay, revocation, and failure modes](docs/replay-and-revocation.md)
-- [Security review](docs/security-review.md)
-- [Adoption, migration, and FAQ](docs/adoption.md)
-- [Changelog](CHANGELOG.md)
+Use the [documentation index](docs/README.md) for the protocol, API,
+deployment, conformance, replay, revocation, security, and adoption guidance.
 
 ## License
 
 MIT. See [LICENSE](LICENSE).
-
-## Ecosystem
-
-Use the [Golib documentation portal](https://github.com/faustbrian/golib/blob/main/docs/index.md)
-to choose companion packages, supported stacks, recipes, and operations guidance.

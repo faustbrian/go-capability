@@ -32,6 +32,10 @@ that hide a failing package.
 
 ## Verification
 
+Install the exact `golib` release declared by `.golib.yaml`; the Make targets
+below are intentionally thin wrappers around that CLI. CI installs and verifies
+the same release automatically.
+
 Run during development:
 
 ```bash
