@@ -1,0 +1,75 @@
+schema_version: 1
+tool_version: v1.0.4
+tool_checksums_sha256: 6c1ee70e3fa7aa333d12420dc78d7740f4de78717d1979eeb8a5f70a2a124ba0
+manifest:
+  modules: modules.json
+  packages: packages.json
+evidence:
+  root: ".verification"
+mutation:
+  root: ".verification/mutation"
+  imports:
+  - module: "."
+    archive: ".verification/mutation/bootstrap/root.zip"
+    ledger: ".verification/mutation/migration-ledger.json"
+api:
+  baselines:
+  - module: "."
+    mode: apidiff
+    path: api/baseline.txt
+operations:
+- module: "."
+  gate: test
+  steps:
+  - type: make
+    makefile: verification/package.mk
+    target: clean-consumer
+    timeout: 20m
+- module: "."
+  gate: docs
+  steps:
+  - type: go-test
+    packages: ["./..."]
+    run: '^Example'
+    count: 1
+    timeout: 20m
+- module: "."
+  gate: conformance
+  steps:
+  - type: make
+    makefile: verification/package.mk
+    target: conformance
+    timeout: 20m
+- module: "."
+  gate: interoperability
+  steps:
+  - type: make
+    makefile: verification/package.mk
+    target: interoperability
+    timeout: 20m
+- module: "."
+  gate: fuzz
+  steps:
+  - type: go-test
+    packages: ["."]
+    fuzz: '^FuzzParseNeverAcceptsTwoPayloadRepresentations$'
+    budget: 10000x
+    timeout: 2m
+  - type: go-test
+    packages: ["."]
+    fuzz: '^FuzzSignedURLRoundTripIsDeterministic$'
+    budget: 10000x
+    timeout: 2m
+  - type: go-test
+    packages: ["."]
+    fuzz: '^FuzzParseTokenIsBounded$'
+    budget: 10000x
+    timeout: 2m
+- module: "."
+  gate: benchmark
+  steps:
+  - type: go-test
+    packages: ["./..."]
+    benchmark: "."
+    budget: 100ms
+    timeout: 20m
