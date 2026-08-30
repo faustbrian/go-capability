@@ -28,6 +28,25 @@ changelog review.
 | Upstream record | No upstream specification owns this local profile; the referenced RFCs govern only their named primitives. |
 | Reconsider when | A separately versioned profile is designed against a named external protocol with complete independent interoperability evidence. |
 
+Machine contract: `capability maintainers`; `omission`; `application-policy`;
+`RFC 4648 Base-N Encodings`; `RFC 4648`; `rfc4648-source`;
+`https://www.rfc-editor.org/rfc/rfc4648.txt`; section `5`; `not specified`.
+The selected behavior is: cap1 is a local v1 protocol for explicitly encoded
+resource operations. A distinct identity prevents importing incompatible token
+semantics. The narrow profile prevents accidental authority widening. Every
+field and token length remains bounded. Another token family requires a
+separate adapter. Consumers must treat the complete cap1 grammar as the wire
+contract. Credible alternatives also include Expose unversioned helpers,
+Serialize arbitrary claims, and Define one narrow, explicitly local and
+versioned capability protocol. Evidence and documentation bindings:
+`testdata/v1-hmac.token`, `scripts/check-interoperability.py`,
+`docs/specification-decisions.md`, and `docs/protocol.md`. No upstream
+specification owns this local profile.
+
+Exact bindings: cap1 is a local v1 protocol for explicitly encoded resource operations. A distinct identity prevents importing incompatible token semantics. Every field and token length remains bounded. Another token family requires a separate adapter. Consumers must treat the complete cap1 grammar as the wire contract. Define one narrow, explicitly local and versioned capability protocol. No upstream specification owns this local profile.
+
+Additional authoritative sources: `{"id":"rfc8259-source","version":"RFC 8259","url":"https://www.rfc-editor.org/rfc/rfc8259.txt","specifications":["RFC 8259 JSON"]}` and `{"id":"rfc9110-source","version":"RFC 9110","url":"https://www.rfc-editor.org/rfc/rfc9110.txt","specifications":["RFC 9110 HTTP Semantics"]}`.
+
 ## CAPABILITY-DEC-002: Algorithm and key-type binding
 
 | Field | Decision |
@@ -45,6 +64,24 @@ changelog review.
 | Public surface | `Algorithm`, `Signer`, `Verifier`, cryptographic constructors, `ResolvedKey`, and `KeySet` |
 | Upstream record | The algorithm bytes and vectors are checksum-pinned in the source manifest; no package-specific erratum changes them. |
 | Reconsider when | A concrete cryptographic migration has reviewed standard-library support, downgrade analysis, vectors, and a versioning plan. |
+
+Machine contract: `capability maintainers`; `omission`; `defensive`;
+`RFC 2104 HMAC`; `RFC 2104`; `rfc2104-source`;
+`https://www.rfc-editor.org/rfc/rfc2104.txt`; section `3`; `SHOULD`.
+Python 3's maintained standard-library HMAC implementation agrees with the
+package's HMAC-SHA-256 bytes for the pinned capability fixture. Exact trusted
+key binding prevents algorithm confusion and downgrade. HMAC keys are copied
+and bounded. The algorithm names hmac-sha256 and ed25519 are local profile
+values. Credible alternatives also include Try every key or algorithm, Infer
+algorithms from key length, and Require an exact trusted algorithm and key-type
+binding. Evidence and documentation bindings: `testdata/v1-hmac.token`,
+`interoperability_test.go`, `scripts/check-interoperability.py`,
+`docs/specification-decisions.md`, and `docs/protocol.md`. No package-specific
+erratum changes the pinned algorithm bytes.
+
+Exact bindings: Python 3's maintained standard-library HMAC implementation agrees with the package's HMAC-SHA-256 bytes for the pinned capability fixture. Exact trusted key binding prevents algorithm confusion and downgrade. HMAC keys are copied and bounded. The algorithm names hmac-sha256 and ed25519 are local profile values. Infer algorithms from key length. Require an exact trusted algorithm and key-type binding. No package-specific erratum changes the pinned algorithm bytes.
+
+Additional authoritative sources: `{"id":"rfc4231-source","version":"RFC 4231","url":"https://www.rfc-editor.org/rfc/rfc4231.txt","specifications":["RFC 4231 HMAC-SHA-256 vectors"]}` and `{"id":"rfc8032-source","version":"RFC 8032","url":"https://www.rfc-editor.org/rfc/rfc8032.txt","specifications":["RFC 8032 Ed25519"]}`.
 
 ## CAPABILITY-DEC-003: Canonical JSON and token framing
 
@@ -64,6 +101,23 @@ changelog review.
 | Upstream record | RFC 8259 permits implementation limits and does not define this signature canonicalization; the policy is intentionally package-owned. |
 | Reconsider when | A new token version adopts a published canonical JSON profile and migration preserves old verification until expiry. |
 
+Machine contract: `capability maintainers`; `implementation-defined behavior`;
+`defensive`; `RFC 8259 JSON`; `RFC 8259`; `rfc8259-source`;
+`https://www.rfc-editor.org/rfc/rfc8259.txt`; section `4`; `not specified`.
+Python 3's maintained standard-library base64 and HMAC implementations
+reproduce the exact pinned canonical token. Tokens contain exactly three
+unpadded base64url segments after the cap1 prefix. One byte representation
+prevents parser and signature differentials. Credible alternatives also
+include Normalize after decoding, Accept padded and unpadded segments, Preserve
+duplicate members, and Define one encoder and require byte-for-byte canonical
+re-encoding. Evidence and documentation bindings: `testdata/v1-hmac.token`,
+`scripts/check-interoperability.py`, `docs/specification-decisions.md`, and
+`docs/protocol.md`. RFC 8259 does not define this signature canonicalization.
+
+Exact bindings: Python 3's maintained standard-library base64 and HMAC implementations reproduce the exact pinned canonical token. Tokens contain exactly three unpadded base64url segments after the cap1 prefix. One byte representation prevents parser and signature differentials. Preserve duplicate members. Define one encoder and require byte-for-byte canonical re-encoding.
+
+Additional authoritative source: `{"id":"rfc4648-source","version":"RFC 4648","url":"https://www.rfc-editor.org/rfc/rfc4648.txt","specifications":["RFC 4648 Base-N Encodings"]}`.
+
 ## CAPABILITY-DEC-004: Time interval and skew semantics
 
 | Field | Decision |
@@ -81,6 +135,18 @@ changelog review.
 | Public surface | `Payload.IssuedAt`, `Payload.NotBefore`, `Payload.ExpiresAt`, `VerifyOptions.Now`, `VerifyOptions.Skew`, and `Limits.MaxLifetime` |
 | Upstream record | No referenced standard defines the complete interval; the exact local behavior is part of capability v1 compatibility. |
 | Reconsider when | A new profile needs different precision or interval semantics and can be versioned without reinterpreting issued tokens. |
+
+Machine contract: `capability maintainers`; `omission`; `application-policy`;
+`RFC 9110 HTTP Semantics`; `RFC 9110`; `rfc9110-source`;
+`https://www.rfc-editor.org/rfc/rfc9110.txt`; section `5.6.7`;
+`not specified`. A half-open interval gives every equality boundary one stable
+meaning. Finite lifetime and skew bound stolen-token exposure. Credible
+alternatives also include Symmetric skew on every field, No lifetime bound,
+Subsecond comparison, and One explicit half-open validity interval with bounded
+skew. Documentation bindings: `docs/specification-decisions.md` and
+`docs/protocol.md`. No referenced standard defines the complete interval.
+
+Exact bindings: A half-open interval gives every equality boundary one stable meaning. One explicit half-open validity interval with bounded skew.
 
 ## CAPABILITY-DEC-005: Encoded authority and application authorization
 
@@ -100,6 +166,21 @@ changelog review.
 | Upstream record | RFC 9110 supplies the adjacent distinction, while the concrete capability dimensions remain package-owned. |
 | Reconsider when | A separately specified attenuation or delegated-caveat model defines complete evaluation and compatibility semantics. |
 
+Machine contract: `capability maintainers`; `omission`; `application-policy`;
+`RFC 9110 HTTP Semantics`; `RFC 9110`; `rfc9110-source`;
+`https://www.rfc-editor.org/rfc/rfc9110.txt`; section `11`; `not specified`.
+Verify authenticates encoded authority and Grant.Authorize separately compares
+every attempted dimension. Verification and authorization are separate
+security decisions. Caveat size and count are bounded. Applications changing
+resource vocabulary or caveat semantics must version their profile. Credible
+alternatives also include Authorize any valid signature, Infer missing
+dimensions, and Require an explicit attempted-use comparison after
+verification. Documentation bindings: `docs/specification-decisions.md` and
+`docs/security-review.md`. RFC 9110 supplies the adjacent distinction while the
+capability dimensions remain package-owned.
+
+Exact bindings: Verify authenticates encoded authority and Grant.Authorize separately compares every attempted dimension. Verification and authorization are separate security decisions. Applications changing resource vocabulary or caveat semantics must version their profile. Infer missing dimensions. Require an explicit attempted-use comparison after verification. RFC 9110 supplies the adjacent distinction while the capability dimensions remain package-owned.
+
 ## CAPABILITY-DEC-006: Signed URL canonicalization
 
 | Field | Decision |
@@ -117,6 +198,18 @@ changelog review.
 | Public surface | `URLProfile`, `URLRequest`, `SignURL`, `VerifyURL`, and URL-related `Limits` |
 | Upstream record | RFC 3986 and `net/url` do not define this signing profile; their pinned component behavior constrains the local decision. |
 | Reconsider when | A named external signed-URL profile is implemented in an isolated adapter with differential vectors. |
+
+Machine contract: `capability maintainers`; `implementation-defined behavior`;
+`defensive`; `RFC 3986 URI Generic Syntax`; `RFC 3986`; `rfc3986-source`;
+`https://www.rfc-editor.org/rfc/rfc3986.txt`; section `3`; `not specified`.
+Signing and routing must use one interpretation. Ambiguous but otherwise
+parseable URLs are incompatible. Credible alternatives also include Sign
+decoded components, Let the HTTP stack normalize, Accept first or last
+duplicate, and Define one strict profile and reject every non-canonical
+alternative. Documentation bindings: `docs/specification-decisions.md` and
+`docs/protocol.md`. RFC 3986 does not define this signing profile.
+
+Exact bindings: Ambiguous but otherwise parseable URLs are incompatible. Sign decoded components. Accept first or last duplicate. Define one strict profile and reject every non-canonical alternative.
 
 ## CAPABILITY-DEC-007: Covered HTTP method, origin, and body digest
 
@@ -136,6 +229,19 @@ changelog review.
 | Upstream record | RFC 9110 defines message semantics but deliberately does not define this capability signature profile or proxy trust model. |
 | Reconsider when | A deployment adopts a separately specified proxy-origin contract or streaming digest profile with equivalent ambiguity analysis. |
 
+Machine contract: `capability maintainers`; `omission`; `transport-specific`;
+`RFC 9110 HTTP Semantics`; `RFC 9110`; `rfc9110-source`;
+`https://www.rfc-editor.org/rfc/rfc9110.txt`; section `4.3.1`;
+`not specified`. Every authority-bearing transport dimension must be explicitly
+trusted or signed. The package does not buffer arbitrary bodies. Credible
+alternatives also include Bind only path, Uppercase methods, Hash bodies
+implicitly, and Require an explicit profile, trusted origin, exact method, and
+digest pairing. Documentation bindings: `docs/specification-decisions.md` and
+`docs/deployment-profiles.md`. RFC 9110 does not define this capability
+signature profile or proxy trust model.
+
+Exact bindings: Every authority-bearing transport dimension must be explicitly trusted or signed. Hash bodies implicitly. Require an explicit profile, trusted origin, exact method, and digest pairing. RFC 9110 does not define this capability signature profile or proxy trust model.
+
 ## CAPABILITY-DEC-008: Bounded-use replay consumption
 
 | Field | Decision |
@@ -153,6 +259,20 @@ changelog review.
 | Public surface | `Payload.MaxUses`, `Consumption`, `ConsumptionResult`, `ConsumptionStore`, `Grant.Consume`, and memory, PostgreSQL, and Valkey adapters |
 | Upstream record | No referenced standard defines this state machine; RFC 9110 idempotency does not resolve transaction commit ambiguity. |
 | Reconsider when | A new adapter proves equivalent atomicity, durability, expiry, and unknown-outcome semantics under its deployment topology. |
+
+Machine contract: `capability maintainers`; `omission`; `application-policy`;
+`RFC 9110 HTTP Semantics`; `RFC 9110`; `rfc9110-source`;
+`https://www.rfc-editor.org/rfc/rfc9110.txt`; section `9.2.2`;
+`not specified`. Positive MaxUses values require an explicit ConsumptionStore
+that atomically binds capability identity, expiry, and maximum uses. One atomic
+state owner is required to prevent concurrent overuse. Process-local memory is
+not cluster-compatible. Credible alternatives also include Consume after the
+side effect, Retry every error, Treat timeout as rejection, and Expose atomic
+store ownership and unknown outcomes explicitly. Documentation bindings:
+`docs/specification-decisions.md` and `docs/replay-and-revocation.md`. RFC 9110
+idempotency does not resolve capability transaction commit ambiguity.
+
+Exact bindings: Positive MaxUses values require an explicit ConsumptionStore that atomically binds capability identity, expiry, and maximum uses. One atomic state owner is required to prevent concurrent overuse. Process-local memory is not cluster-compatible. Consume after the side effect. Expose atomic store ownership and unknown outcomes explicitly. RFC 9110 idempotency does not resolve capability transaction commit ambiguity.
 
 ## CAPABILITY-DEC-009: Revocation matching and consistency
 
@@ -172,6 +292,22 @@ changelog review.
 | Upstream record | There is no upstream capability-v1 revocation standard; this policy remains local and explicit. |
 | Reconsider when | A durable revocation adapter defines measurable propagation, outage, and recovery semantics that require additive public policy. |
 
+Machine contract: `capability maintainers`; `omission`; `application-policy`;
+`RFC 9110 HTTP Semantics`; `RFC 9110`; `rfc9110-source`;
+`https://www.rfc-editor.org/rfc/rfc9110.txt`; section `11.1`;
+`not specified`. Verification submits an exact bounded RevocationQuery and
+outage or cancellation fails closed. Exact dimensions avoid wildcard
+broadening and explicit outages avoid silent acceptance. Exact dimensions
+prevent accidental wildcard broadening. Deployments must account for the
+configured store's propagation window. Credible alternatives also include
+Infer hierarchy, Fail open on outage, Promise instant consistency, and Expose
+exact match dimensions and let adapters document consistency. Documentation
+bindings: `docs/specification-decisions.md` and
+`docs/replay-and-revocation.md`. There is no upstream capability-v1 revocation
+standard.
+
+Exact bindings: Verification submits an exact bounded RevocationQuery and outage or cancellation fails closed. Exact dimensions avoid wildcard broadening and explicit outages avoid silent acceptance. Exact dimensions prevent accidental wildcard broadening. Deployments must account for the configured store's propagation window. Expose exact match dimensions and let adapters document consistency. There is no upstream capability-v1 revocation standard.
+
 ## CAPABILITY-DEC-010: Key resolution and lifecycle snapshots
 
 | Field | Decision |
@@ -190,6 +326,24 @@ changelog review.
 | Upstream record | Cryptographic source standards do not define application resolver lifecycle; the bounded synchronous policy is local. |
 | Reconsider when | A separate cache or remote-key adapter specifies freshness, synchronization, shutdown, outage, and compromise behavior without changing the core contract. |
 
+Machine contract: `capability maintainers`; `omission`; `defensive`;
+`RFC 2104 HMAC`; `RFC 2104`; `rfc2104-source`;
+`https://www.rfc-editor.org/rfc/rfc2104.txt`; section `3`; `SHOULD`.
+KeySet is an immutable exact key-ID snapshot and BoundedResolver performs one
+bounded caller-owned resolution operation. Explicit snapshots and bounded
+lookup keep lifecycle and remote ownership observable. Provider secrets and
+causes are discarded from public errors. Distributed propagation depends on
+caller-owned resolver deployment. Credible alternatives also include Retry or
+fetch without a bound, Try every key, Expose provider errors, and Use immutable
+local snapshots and one bounded caller-owned resolution operation.
+Documentation bindings: `docs/specification-decisions.md` and
+`docs/deployment-profiles.md`. Cryptographic source standards do not define
+application resolver lifecycle.
+
+Exact bindings: KeySet is an immutable exact key-ID snapshot and BoundedResolver performs one bounded caller-owned resolution operation. Explicit snapshots and bounded lookup keep lifecycle and remote ownership observable. Provider secrets and causes are discarded from public errors. Distributed propagation depends on caller-owned resolver deployment. Retry or fetch without a bound. Use immutable local snapshots and one bounded caller-owned resolution operation. Cryptographic source standards do not define application resolver lifecycle.
+
+Additional authoritative source: `{"id":"rfc8032-source","version":"RFC 8032","url":"https://www.rfc-editor.org/rfc/rfc8032.txt","specifications":["RFC 8032 Ed25519"]}`.
+
 ## CAPABILITY-DEC-011: HTTP middleware failure and ownership boundary
 
 | Field | Decision |
@@ -207,6 +361,20 @@ changelog review.
 | Public surface | `caphttp.VerifierOptions`, `caphttp.Verifier`, `caphttp.GrantFromContext`, `caphttp.ErrorHandler`, and `caphttp.BodyDigest` |
 | Upstream record | RFC 9110 defines general response semantics but no capability-v1 transport mapping. |
 | Reconsider when | A separately versioned public API profile standardizes capability failures, authorization, or consumption ordering. |
+
+Machine contract: `capability maintainers`; `omission`; `transport-specific`;
+`RFC 9110 HTTP Semantics`; `RFC 9110`; `rfc9110-source`;
+`https://www.rfc-editor.org/rfc/rfc9110.txt`; section `15`; `not specified`.
+caphttp.Verifier verifies before calling the next handler and leaves
+authorization, consumption, and protected side effects explicit. The adapter
+must not hide application-owned security and side-effect ordering. The default
+failure status and body are package policy, not a standardized capability
+response. Credible alternatives also include Pass errors downstream, Expose
+detailed causes, Use framework state, and Verify only and return one bounded
+secret-safe adapter response. Documentation bindings:
+`docs/specification-decisions.md` and `docs/security-review.md`.
+
+Exact bindings: caphttp.Verifier verifies before calling the next handler and leaves authorization, consumption, and protected side effects explicit. The adapter must not hide application-owned security and side-effect ordering. The default failure status and body are package policy, not a standardized capability response. Expose detailed causes. Verify only and return one bounded secret-safe adapter response.
 
 ## Unresolved decisions
 

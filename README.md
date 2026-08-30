@@ -139,6 +139,8 @@ bounded parsing, and byte-preserving UTF-8 semantics. See the
 
 Use the [documentation index](docs/README.md) for the protocol, API,
 deployment, conformance, replay, revocation, security, and adoption guidance.
+Material standards interpretations and local protocol policy are recorded in
+the [specification decision register](docs/specification-decisions.md).
 
 ## License
 

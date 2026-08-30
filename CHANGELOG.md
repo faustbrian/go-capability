@@ -14,6 +14,24 @@ the module follows semantic versioning.
 ### Documentation
 
 - Replace the archived monorepo link with package-owned documentation.
+- Add machine-validated source monitoring, conformance bindings, change
+  control, and append-only history for the [capability specification decision
+  register](docs/specification-decisions.md). The recorded choices preserve
+  existing capability-v1 behavior.
+
+### Specification Decisions
+
+- CAPABILITY-DEC-001 sha256:1107fd84dbd9852b589f4b12a1351aed9b5e74191b854e777223800fb96c9cef
+- CAPABILITY-DEC-002 sha256:d456c41ac0360f68c49735a010fc92792d7dc736f5c1eb769ec3a6e5c766706d
+- CAPABILITY-DEC-003 sha256:516adafa8914f8d8a0df34e3e463b0c205cdcfe40b5f76dc5cc6fe04ed1602a4
+- CAPABILITY-DEC-004 sha256:fb77e88e5663fdbb9dc2d791ed363c91284bdd375aae3bc0f129c91d85d4a6c7
+- CAPABILITY-DEC-005 sha256:e273f0a3be717a603ab549112ca6a17b4dddf63aa9822ea439512044d7eaa334
+- CAPABILITY-DEC-006 sha256:eb9a9c432b3f6077538ec0df68d9f774587eea8ec5c03855e3d815d436e9fef7
+- CAPABILITY-DEC-007 sha256:490891032e747f235527996acc36073b4a75115e5c37ae22ba7a925d30959e81
+- CAPABILITY-DEC-008 sha256:b9f2c3c55dd271192f3b33581c9bd51542c0b04e30671b397f4503690c342468
+- CAPABILITY-DEC-009 sha256:827d866d641c94c5f8238ada6aa89ecacaf883596c040b29dda676f85da54106
+- CAPABILITY-DEC-010 sha256:69e3e668def16e00dd7cf0ed4ef345a71b5f8b38805d0e15c891a1da6767f926
+- CAPABILITY-DEC-011 sha256:ccbb5b4d4206f52b03b96fb73ba1ee792ec83f9afbd48bce25edc20905e05d14
 
 ## [1.0.0] - 2026-08-25
 

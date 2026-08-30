@@ -1,5 +1,7 @@
 GOLIB ?= golib
 
+include verification/package.mk
+
 .PHONY: check ci inventory repository-check
 
 check:
