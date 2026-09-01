@@ -16,3 +16,8 @@ defaults. A compile-compatible change can still be behaviorally breaking.
 Specification-backed modules MUST NOT diverge from their declared standards.
 Ambiguities require documented decisions and stable tests. Deprecated APIs
 follow [`DEPRECATION.md`](DEPRECATION.md).
+
+The [specification decision register](docs/specification-decisions.md) is part
+of this compatibility contract. Any changed wire, parser, validation,
+canonicalization, resolution, or transport decision requires compatibility and
+changelog review even when prior behavior was undocumented.

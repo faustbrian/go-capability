@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-08-30",
+  "review_interval_days": 90,
+  "authorities": [
+    {"id":"rfc2104-source","kind":"specification","version":"RFC 2104","url":"https://www.rfc-editor.org/rfc/rfc2104.txt","sha256":"64d5245a9101929025336e470e3737f118704001249d503c85a86e19fe9fbb01","specifications":["RFC 2104 HMAC"]},
+    {"id":"rfc2104-errata","kind":"errata","url":"https://errata.rfc-editor.org/rfc2104","sha256":"9b54641c8435bbaeb9b45d1f53e213946d2fe1dc76214c4f72fd67ed07f17cd9","specifications":["RFC 2104 HMAC"]},
+    {"id":"rfc4231-source","kind":"specification","version":"RFC 4231","url":"https://www.rfc-editor.org/rfc/rfc4231.txt","sha256":"72178527ce93500e730bc8eb182b857e583096d652b64ece0879c52ba1df973b","specifications":["RFC 4231 HMAC-SHA-256 vectors"]},
+    {"id":"rfc4231-errata","kind":"errata","url":"https://errata.rfc-editor.org/rfc4231","sha256":"bab519c757fb2e2e39ae388ae6c5030e064e23a007174c6615270ffb8fe65f1a","specifications":["RFC 4231 HMAC-SHA-256 vectors"]},
+    {"id":"rfc3986-source","kind":"specification","version":"RFC 3986","url":"https://www.rfc-editor.org/rfc/rfc3986.txt","sha256":"3102dae4b68cebe40337730312fcb612297b8928547267e8b3d1ee6002b2d683","specifications":["RFC 3986 URI Generic Syntax"]},
+    {"id":"rfc3986-errata","kind":"errata","url":"https://errata.rfc-editor.org/rfc3986","sha256":"14c0668758374a5cc14cf248292c31f694e6d420f43e135e0fe02427f145b06a","specifications":["RFC 3986 URI Generic Syntax"]},
+    {"id":"rfc4648-source","kind":"specification","version":"RFC 4648","url":"https://www.rfc-editor.org/rfc/rfc4648.txt","sha256":"84e14418f795d503be5f34bf23ce4ebaa119e9ec7c9f667d8caeb111385b178f","specifications":["RFC 4648 Base-N Encodings"]},
+    {"id":"rfc4648-errata","kind":"errata","url":"https://errata.rfc-editor.org/rfc4648","sha256":"33f5de29774d66f56e251f2acf5e53e1e09dfb54f7728cf56fff1db695f86925","specifications":["RFC 4648 Base-N Encodings"]},
+    {"id":"rfc8032-source","kind":"specification","version":"RFC 8032","url":"https://www.rfc-editor.org/rfc/rfc8032.txt","sha256":"ed63657ff389301282b169b0abde9b5dd2c7e4d524fdfa5da6ff3094fc93c4c3","specifications":["RFC 8032 Ed25519"]},
+    {"id":"rfc8032-errata","kind":"errata","url":"https://errata.rfc-editor.org/rfc8032","sha256":"2588c3c21031bb27340ee96002b1bf582ee2b331cae26c479e8a9b8dbf39b70d","specifications":["RFC 8032 Ed25519"]},
+    {"id":"rfc8259-source","kind":"specification","version":"RFC 8259","url":"https://www.rfc-editor.org/rfc/rfc8259.txt","sha256":"61a5378f4255c720beb2a4b4a63b29540147c140f36988bf086291989b4cd2d7","specifications":["RFC 8259 JSON"]},
+    {"id":"rfc8259-errata","kind":"errata","url":"https://errata.rfc-editor.org/rfc8259","sha256":"5819db2e0233addf17ed540db88cf92cbefda5a60c38877e0d4cbf6b876b7cf4","specifications":["RFC 8259 JSON"]},
+    {"id":"rfc9110-source","kind":"specification","version":"RFC 9110","url":"https://www.rfc-editor.org/rfc/rfc9110.txt","sha256":"21c1cdce6ab0e5509b04d84a28000836c7a087cf786efe6f04877ebfff47232a","specifications":["RFC 9110 HTTP Semantics"]},
+    {"id":"rfc9110-errata","kind":"errata","url":"https://errata.rfc-editor.org/rfc9110","sha256":"38bd006c96f8963d58573f704c5313a5f81968b90738c03ade0b036ec7bbdf4b","specifications":["RFC 9110 HTTP Semantics"]}
+  ]
+}
