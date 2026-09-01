@@ -1,5 +1,7 @@
 GOLIB ?= golib
 
+.DEFAULT_GOAL := check
+
 include verification/package.mk
 
 .PHONY: check ci inventory repository-check
