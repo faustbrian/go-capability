@@ -7,9 +7,10 @@ the module follows semantic versioning.
 
 ### Changed
 
-- Replace the repository-local verification implementation with the pinned
-  `go-library-tools` v1.0.13 CLI and reusable workflow while preserving package
-  policy and content-addressed verification evidence.
+- Adopt the pinned `go-library-tools` v1.2.0 CLI and reusable workflow so CI
+  enforces specification decisions, conformance bindings, source monitoring,
+  and change control while retaining package-owned policy and verification
+  evidence.
 
 ### Documentation
 
