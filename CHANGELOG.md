@@ -20,6 +20,9 @@ the module follows semantic versioning.
 
 ### Documentation
 
+- Record RFC 9110 Erratum 9162 as behavior-neutral for capability v1 and its
+  HTTP adapter, with no decision or conformance-binding changes.
+
 - Link consumers to the immutable v1.3.0 Golib ecosystem index and Service edge
   package-family guidance.
 

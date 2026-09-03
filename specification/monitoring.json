@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "reviewed_at": "2026-08-30",
+  "reviewed_at": "2026-09-03",
   "review_interval_days": 90,
   "authorities": [
     {"id":"rfc2104-source","kind":"specification","version":"RFC 2104","url":"https://www.rfc-editor.org/rfc/rfc2104.txt","sha256":"64d5245a9101929025336e470e3737f118704001249d503c85a86e19fe9fbb01","specifications":["RFC 2104 HMAC"]},
@@ -16,6 +16,6 @@
     {"id":"rfc8259-source","kind":"specification","version":"RFC 8259","url":"https://www.rfc-editor.org/rfc/rfc8259.txt","sha256":"61a5378f4255c720beb2a4b4a63b29540147c140f36988bf086291989b4cd2d7","specifications":["RFC 8259 JSON"]},
     {"id":"rfc8259-errata","kind":"errata","url":"https://errata.rfc-editor.org/rfc8259","sha256":"5819db2e0233addf17ed540db88cf92cbefda5a60c38877e0d4cbf6b876b7cf4","specifications":["RFC 8259 JSON"]},
     {"id":"rfc9110-source","kind":"specification","version":"RFC 9110","url":"https://www.rfc-editor.org/rfc/rfc9110.txt","sha256":"21c1cdce6ab0e5509b04d84a28000836c7a087cf786efe6f04877ebfff47232a","specifications":["RFC 9110 HTTP Semantics"]},
-    {"id":"rfc9110-errata","kind":"errata","url":"https://errata.rfc-editor.org/rfc9110","sha256":"38bd006c96f8963d58573f704c5313a5f81968b90738c03ade0b036ec7bbdf4b","specifications":["RFC 9110 HTTP Semantics"]}
+    {"id":"rfc9110-errata","kind":"errata","url":"https://errata.rfc-editor.org/rfc9110","sha256":"1f6790054c0cdb2f2a70a94fa2b9c73b09a4ee0578a32b4a3006ed0ecfaac86d","specifications":["RFC 9110 HTTP Semantics"]}
   ]
 }
