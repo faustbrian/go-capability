@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "repository": "github.com/faustbrian/go-capability",
   "go_version": "1.26.6",
   "modules": [
@@ -77,6 +77,99 @@
       "family_label": "Service Edge",
       "family_description": "Request-edge policy, identity, access decisions, routing, middleware, and process lifecycle.",
       "family_order": 2,
+      "cohesion": {
+        "family": "service-edge",
+        "secondary_capabilities": [
+          "cryptography-and-secrets",
+          "database-and-storage",
+          "http-and-service-edge",
+          "identity-and-access",
+          "testing-and-conformance"
+        ],
+        "responsibility": "Issue and verify narrowly scoped, tamper-evident, expiring capabilities and signed URLs with explicit replay, revocation, and storage boundaries.",
+        "non_goals": [
+          "Own caller authentication, application authorization policy, sessions, payload encryption, or legal non-repudiation.",
+          "Own database connections, Valkey clients, HTTP servers, remote key sources, background work, or application side effects."
+        ],
+        "public_package_identifier": "capability",
+        "primary_entry_packages": [
+          "github.com/faustbrian/go-capability"
+        ],
+        "package_selection": {
+          "github.com/faustbrian/go-capability": "Use for capability payloads, signing, verification, authorization, signed URLs, replay consumption, and revocation contracts.",
+          "github.com/faustbrian/go-capability/caphttp": "Use to verify capabilities at net/http boundaries or sign outbound HTTP requests against an explicit URL profile.",
+          "github.com/faustbrian/go-capability/memory": "Use for process-local replay and revocation state where restart loss and single-process scope are acceptable.",
+          "github.com/faustbrian/go-capability/postgres": "Use for durable atomic capability-consumption records in caller-owned PostgreSQL infrastructure.",
+          "github.com/faustbrian/go-capability/valkey": "Use for atomic capability-consumption records in a caller-owned Valkey deployment."
+        },
+        "lifecycle_status": "active",
+        "maturity": "stable",
+        "construction_styles": [
+          "new-options",
+          "plain-function",
+          "validated-value"
+        ],
+        "lifecycle_styles": [
+          "stateless"
+        ],
+        "ownership": {
+          "configuration": "caller",
+          "mutable_inputs": [
+            "borrow",
+            "copy"
+          ],
+          "runtime_resources": "caller",
+          "background_work": "none"
+        },
+        "optional_owned_dependencies": [],
+        "adapters": [
+          "github.com/faustbrian/go-capability/caphttp",
+          "github.com/faustbrian/go-capability/memory",
+          "github.com/faustbrian/go-capability/postgres",
+          "github.com/faustbrian/go-capability/valkey"
+        ],
+        "companions": [],
+        "supported_go": {
+          "minimum": "1.26.6",
+          "tested": [
+            "1.26.6"
+          ]
+        },
+        "supported_platforms": [
+          "portable-go"
+        ],
+        "supported_backends": [
+          "memory",
+          "postgresql",
+          "valkey"
+        ],
+        "supported_protocols": [
+          "capability-v1",
+          "ed25519",
+          "hmac-sha-256",
+          "http",
+          "signed-url-v1"
+        ],
+        "documentation": {
+          "readme": "README.md",
+          "api": "docs/api.md",
+          "adoption": "docs/adoption.md",
+          "security": "docs/security-review.md",
+          "compatibility": "COMPATIBILITY.md",
+          "performance": "benchmark_test.go",
+          "examples": "example_test.go",
+          "faq": "docs/adoption.md",
+          "changelog": "CHANGELOG.md",
+          "pkg_go_dev": "https://pkg.go.dev/github.com/faustbrian/go-capability",
+          "ecosystem_index": "https://github.com/faustbrian/go-library-tools/blob/v1.3.0/docs/ecosystem/README.md"
+        },
+        "known_good_compatibility_sets": [],
+        "delivery": {
+          "implementation": "not-started",
+          "hardening": "not-started",
+          "release": "not-started"
+        }
+      },
       "version": "1.0.0",
       "tag_prefix": "v",
       "owned_dependencies": [],

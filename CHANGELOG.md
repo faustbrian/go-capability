@@ -7,12 +7,21 @@ the module follows semantic versioning.
 
 ### Changed
 
+- Publish schema-v2 cohesion metadata for capability issuance, verification,
+  HTTP composition, replay and revocation state, and durable storage adapters.
+- Adopt the checksum-verified `go-library-tools` v1.3.0 CLI, expose the local
+  `make cohesion` gate, and pin reusable-workflow cohesion enforcement to its
+  final immutable revision.
+
 - Adopt the pinned `go-library-tools` v1.2.0 CLI and reusable workflow so CI
   enforces specification decisions, conformance bindings, source monitoring,
   and change control while retaining package-owned policy and verification
   evidence.
 
 ### Documentation
+
+- Link consumers to the immutable v1.3.0 Golib ecosystem index and Service edge
+  package-family guidance.
 
 - Replace the archived monorepo link with package-owned documentation.
 - Add machine-validated source monitoring, conformance bindings, change
