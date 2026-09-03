@@ -12,6 +12,7 @@ check:
 ci:
 	$(GOLIB) repository check
 	$(GOLIB) cohesion check
+	$(GOLIB) specification check --online
 	$(GOLIB) check --all
 
 cohesion:
