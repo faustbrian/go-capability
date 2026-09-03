@@ -7,6 +7,11 @@ the module follows semantic versioning.
 
 ### Changed
 
+- Adopt the checksum-verified `go-library-tools` v1.4.0 CLI and immutable
+  W14-enforcement workflow as the final authoritative tooling identity.
+- Require the local `make ci` contract to validate declared specification
+  authorities online before running the complete module gate.
+
 - Publish schema-v2 cohesion metadata for capability issuance, verification,
   HTTP composition, replay and revocation state, and durable storage adapters.
 - Adopt the checksum-verified `go-library-tools` v1.3.0 CLI, expose the local
