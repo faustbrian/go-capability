@@ -376,6 +376,12 @@ secret-safe adapter response. Documentation bindings:
 
 Exact bindings: caphttp.Verifier verifies before calling the next handler and leaves authorization, consumption, and protected side effects explicit. The adapter must not hide application-owned security and side-effect ordering. The default failure status and body are package policy, not a standardized capability response. Expose detailed causes. Verify only and return one bounded secret-safe adapter response.
 
+## Authority review history
+
+| Reviewed | Authority | Disposition | Decision impact |
+| --- | --- | --- | --- |
+| 2026-09-03 | RFC 9110 Erratum 9162 | Behavior-neutral. The proposed comma-space spelling concerns combination of repeated HTTP field lines. Capability v1 owns token identity, validity, authorization, signed method, origin and digest dimensions, consumption, revocation, and middleware failure semantics; it neither combines repeated fields nor exposes that operation as a contract. | No decision is directly implicated. The RFC-citing applicability inventory remains `CAPABILITY-DEC-001`, `CAPABILITY-DEC-004`, `CAPABILITY-DEC-005`, `CAPABILITY-DEC-007`, `CAPABILITY-DEC-008`, `CAPABILITY-DEC-009`, and `CAPABILITY-DEC-011`; their decisions and conformance bindings are unchanged. |
+
 ## Unresolved decisions
 
 None for the currently supported capability v1 and signed-URL surfaces. A new
