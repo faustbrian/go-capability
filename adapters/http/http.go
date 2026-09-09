@@ -56,7 +56,13 @@ type grantContextKey struct{}
 // NewVerifier validates an HTTP integration. Origin is trusted static external
 // configuration for absolute profiles; request forwarding headers are ignored.
 func NewVerifier(options VerifierOptions) (*Verifier, error) {
-	if options.Resolver == nil || options.Clock == nil || options.Skew < 0 {
+	if options.Resolver == nil {
+		return nil, capability.ErrInvalidConfiguration
+	}
+	if options.Clock == nil {
+		return nil, capability.ErrInvalidConfiguration
+	}
+	if options.Skew < 0 {
 		return nil, capability.ErrInvalidConfiguration
 	}
 	if err := options.Profile.Validate(options.Limits); err != nil {
