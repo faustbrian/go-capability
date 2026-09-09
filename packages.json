@@ -16,6 +16,30 @@
     },
     {
       "module_directory": ".",
+      "directory": "adapters/http",
+      "name": "capabilityhttp",
+      "import_path": "github.com/faustbrian/go-capability/adapters/http",
+      "kind": "public",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
+    },
+    {
+      "module_directory": ".",
+      "directory": "adapters/memory",
+      "name": "capabilitymemory",
+      "import_path": "github.com/faustbrian/go-capability/adapters/memory",
+      "kind": "public",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
+    },
+    {
+      "module_directory": ".",
       "directory": "caphttp",
       "name": "caphttp",
       "import_path": "github.com/faustbrian/go-capability/caphttp",
