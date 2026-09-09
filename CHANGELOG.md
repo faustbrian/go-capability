@@ -16,7 +16,7 @@ the module follows semantic versioning.
   retaining the legacy packages' distinct named-type and reflection identities,
   error behavior, defaults, ownership, concurrency, and context interoperability.
   PostgreSQL and Valkey remain at their domain-owned paths.
-- Adopt the checksum-verified `go-library-tools` v1.5.6 contract and immutable
+- Adopt the checksum-verified `go-library-tools` v1.6.1 contract and immutable
   reusable workflow for current release and module-selection validation.
 
 - Adopt the checksum-verified `go-library-tools` v1.4.0 CLI and immutable
