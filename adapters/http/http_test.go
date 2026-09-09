@@ -5,6 +5,7 @@ package capabilityhttp_test
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -15,6 +16,50 @@ import (
 	"github.com/faustbrian/go-capability/adapters/http"
 	legacy "github.com/faustbrian/go-capability/caphttp"
 )
+
+func TestNewVerifierRejectsInvalidDependencies(t *testing.T) {
+	t.Parallel()
+
+	profile := capability.URLProfile{
+		Name:               "relative-v1",
+		SignatureParameter: "cap",
+		AllowRelative:      true,
+	}
+	clock := fixedClock{now: time.Date(2026, 9, 9, 12, 0, 0, 0, time.UTC)}
+	resolver := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
+		return capability.ResolvedKey{}, nil
+	})
+
+	tests := map[string]capabilityhttp.VerifierOptions{
+		"nil resolver": {
+			Profile: profile,
+			Clock:   clock,
+			Limits:  capability.DefaultLimits(),
+		},
+		"nil clock": {
+			Profile:  profile,
+			Resolver: resolver,
+			Limits:   capability.DefaultLimits(),
+		},
+		"negative skew": {
+			Profile:  profile,
+			Resolver: resolver,
+			Clock:    clock,
+			Skew:     -time.Nanosecond,
+			Limits:   capability.DefaultLimits(),
+		},
+	}
+
+	for name, options := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if _, err := capabilityhttp.NewVerifier(options); !errors.Is(err, capability.ErrInvalidConfiguration) {
+				t.Fatalf("NewVerifier() error = %v, want %v", err, capability.ErrInvalidConfiguration)
+			}
+		})
+	}
+}
 
 func TestSuccessorPreservesHTTPCompatibility(t *testing.T) {
 	t.Parallel()
