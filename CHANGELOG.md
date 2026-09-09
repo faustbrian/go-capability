@@ -5,7 +5,19 @@ the module follows semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Add `adapters/http` and `adapters/memory` as the target-oriented HTTP and
+  process-local state paths while preserving the complete released behavior.
+
 ### Changed
+
+- Deprecate `caphttp` and `memory` in favor of their additive successors while
+  retaining the legacy packages' distinct named-type and reflection identities,
+  error behavior, defaults, ownership, concurrency, and context interoperability.
+  PostgreSQL and Valkey remain at their domain-owned paths.
+- Adopt the checksum-verified `go-library-tools` v1.6.2 contract and immutable
+  reusable workflow for current release and module-selection validation.
 
 - Adopt the checksum-verified `go-library-tools` v1.4.0 CLI and immutable
   W14-enforcement workflow as the final authoritative tooling identity.
@@ -25,6 +37,8 @@ the module follows semantic versioning.
 
 ### Documentation
 
+- Record RFC 9110 Erratum 9164 as behavior-neutral for the capability HTTP
+  adapter and preserve the existing decisions and conformance bindings.
 - Record RFC 9110 Erratum 9162 as behavior-neutral for capability v1 and its
   HTTP adapter, with no decision or conformance-binding changes.
 

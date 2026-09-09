@@ -17,6 +17,31 @@
 
 ## Migration
 
+### Adapter package paths
+
+New code should import `github.com/faustbrian/go-capability/adapters/http` and
+`github.com/faustbrian/go-capability/adapters/memory`. Existing imports of
+`github.com/faustbrian/go-capability/caphttp` and
+`github.com/faustbrian/go-capability/memory` remain source- and
+behavior-compatible facades. Migration updates the import paths and default
+qualifiers to `capabilityhttp` and `capabilitymemory`; callers may temporarily
+alias the new imports to their old qualifiers when an import-path-only change
+is preferable. Do not move `postgres` or `valkey`; those packages remain
+domain-owned because they implement the persisted replay model and atomic
+bounded-use semantics.
+
+The successor packages use the frozen default identifiers `capabilityhttp` and
+`capabilitymemory`. Their named types are successor-owned; the legacy facades
+retain their original, distinct named-type and reflection identities.
+
+The legacy paths remain supported for at least 180 days after the successors
+resolve publicly and through two subsequently published stable minor releases
+that contain both paths, whichever is longer. Removal also requires all owned
+consumers to migrate, clean external-consumer evidence, and a separately
+authorized next-major release. No current v1 consumer must migrate immediately.
+
+### Protocol adoption
+
 Do not translate arbitrary JWT claims into capabilities. Define a new narrow
 resource and operation vocabulary, issue both formats during a bounded overlap,
 verify the capability at a separate endpoint or code path, and stop old

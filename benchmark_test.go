@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/faustbrian/go-capability"
-	"github.com/faustbrian/go-capability/memory"
+	"github.com/faustbrian/go-capability/adapters/memory"
 )
 
 func BenchmarkIssueHMACSHA256(b *testing.B) {
@@ -74,7 +74,7 @@ func BenchmarkVerifyURLHMACSHA256(b *testing.B) {
 
 func BenchmarkMemoryConsume(b *testing.B) {
 	clock := benchmarkClock{now: testNow}
-	store, _ := memory.NewConsumptionStore(clock)
+	store, _ := capabilitymemory.NewConsumptionStore(clock)
 	request := capability.Consumption{CapabilityID: "benchmark", ExpiresAt: testNow.Add(time.Hour), MaxUses: ^uint32(0)}
 	b.ReportAllocs()
 	for b.Loop() {
@@ -83,7 +83,7 @@ func BenchmarkMemoryConsume(b *testing.B) {
 }
 
 func BenchmarkMemoryRevocationCheck(b *testing.B) {
-	store := memory.NewRevocations()
+	store := capabilitymemory.NewRevocations()
 	query := capability.RevocationQuery{Issuer: "issuer", CapabilityID: "capability", IssuedAt: testNow}
 	b.ReportAllocs()
 	for b.Loop() {
@@ -92,7 +92,7 @@ func BenchmarkMemoryRevocationCheck(b *testing.B) {
 }
 
 func BenchmarkMemoryRevokeCapability(b *testing.B) {
-	store := memory.NewRevocations()
+	store := capabilitymemory.NewRevocations()
 	b.ReportAllocs()
 	for b.Loop() {
 		_ = store.RevokeCapability(context.Background(), "issuer", "capability")

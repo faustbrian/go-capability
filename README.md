@@ -28,6 +28,11 @@ go get github.com/faustbrian/go-capability@v1
 
 The core module has no non-standard-library runtime dependencies.
 
+Use `github.com/faustbrian/go-capability/adapters/http` for `net/http`
+integration and `github.com/faustbrian/go-capability/adapters/memory` for
+process-local replay and revocation state. The released `caphttp` and `memory`
+paths remain compatibility facades during the documented migration interval.
+
 Run `make clean-consumer` to compile the complete public surface from a fresh
 external module with no repository workspace assistance.
 `make interoperability` reproduces the HMAC golden token with Python's
@@ -109,9 +114,10 @@ whose `Consume` operation atomically commits only while the count remains below
 the signed maximum. Any storage error has an unknown outcome and is returned as
 `ErrConsumptionUnknown`; do not retry the business side effect blindly.
 
-`memory.ConsumptionStore` and `memory.Revocations` are process-local adapters.
-They are suitable only when one process owns all decisions. They do not provide
-cluster coordination or instant global revocation.
+`adapters/memory.ConsumptionStore` and `adapters/memory.Revocations` are
+process-local adapters. They are suitable only when one process owns all
+decisions. They do not provide cluster coordination or instant global
+revocation.
 
 Revocation checks can match capability ID, signing key ID, subject, exact
 issuer/tenant/resource, or an issuer-wide issued-before cutoff. Remote stores

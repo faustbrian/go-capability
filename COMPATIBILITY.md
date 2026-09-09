@@ -17,6 +17,13 @@ Specification-backed modules MUST NOT diverge from their declared standards.
 Ambiguities require documented decisions and stable tests. Deprecated APIs
 follow [`DEPRECATION.md`](DEPRECATION.md).
 
+The deprecated `caphttp` and `memory` paths remain supported until the longer
+of 180 days after their `adapters/http` and `adapters/memory` successors first
+resolve publicly and two subsequently published stable minor releases that
+contain both paths. Removal additionally requires owned-consumer migration,
+clean external-consumer evidence, continued correctness and security
+maintenance, and a separately authorized next-major release.
+
 The [specification decision register](docs/specification-decisions.md) is part
 of this compatibility contract. Any changed wire, parser, validation,
 canonicalization, resolution, or transport decision requires compatibility and

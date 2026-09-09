@@ -1,16 +1,17 @@
-// Package caphttp integrates verified signed-URL grants with net/http without
-// hiding application authorization or bounded-use consumption.
+// Package caphttp is the compatibility facade for the target-oriented HTTP
+// adapter.
+//
+// Deprecated: use github.com/faustbrian/go-capability/adapters/http. This
+// package remains supported through the documented compatibility interval.
 package caphttp
 
 import (
 	"context"
-	"errors"
 	"net/http"
-	"net/url"
-	"strings"
 	"time"
 
 	"github.com/faustbrian/go-capability"
+	capabilityhttp "github.com/faustbrian/go-capability/adapters/http"
 )
 
 // Clock supplies request-time wall clock values.
@@ -38,125 +39,43 @@ type VerifierOptions struct {
 	ErrorHandler ErrorHandler
 }
 
-// Verifier verifies request URLs and attaches authenticated grants to context.
+// Verifier preserves the released compatibility-path type identity while
+// delegating all behavior to the canonical adapter.
 type Verifier struct {
-	profile      capability.URLProfile
-	resolver     capability.Resolver
-	origin       string
-	clock        Clock
-	skew         time.Duration
-	limits       capability.Limits
-	revocations  capability.RevocationChecker
-	bodyDigest   BodyDigest
-	errorHandler ErrorHandler
+	canonical *capabilityhttp.Verifier
 }
 
-type grantContextKey struct{}
-
-// NewVerifier validates an HTTP integration. Origin is trusted static external
-// configuration for absolute profiles; request forwarding headers are ignored.
+// NewVerifier validates an HTTP integration.
 func NewVerifier(options VerifierOptions) (*Verifier, error) {
-	if options.Resolver == nil || options.Clock == nil || options.Skew < 0 {
-		return nil, capability.ErrInvalidConfiguration
-	}
-	if err := options.Profile.Validate(options.Limits); err != nil {
-		return nil, err
-	}
-	if options.Profile.RequireBodyDigest != (options.BodyDigest != nil) {
-		return nil, capability.ErrInvalidConfiguration
-	}
-	origin, err := validateOrigin(options.Origin, options.Profile)
+	verifier, err := capabilityhttp.NewVerifier(capabilityhttp.VerifierOptions{
+		Profile: options.Profile, Resolver: options.Resolver, Origin: options.Origin,
+		Clock: options.Clock, Skew: options.Skew, Limits: options.Limits,
+		Revocations: options.Revocations, BodyDigest: capabilityhttp.BodyDigest(options.BodyDigest),
+		ErrorHandler: capabilityhttp.ErrorHandler(options.ErrorHandler),
+	})
 	if err != nil {
 		return nil, err
 	}
-	errorHandler := options.ErrorHandler
-	if errorHandler == nil {
-		errorHandler = func(writer http.ResponseWriter, _ *http.Request, _ error) {
-			http.Error(writer, "invalid capability", http.StatusUnauthorized)
-		}
-	}
-	return &Verifier{
-		profile: options.Profile, resolver: options.Resolver, origin: origin,
-		clock: options.Clock, skew: options.Skew, limits: options.Limits,
-		revocations: options.Revocations, bodyDigest: options.BodyDigest,
-		errorHandler: errorHandler,
-	}, nil
+	return &Verifier{canonical: verifier}, nil
 }
 
 // VerifyRequest verifies a request but does not authorize or consume its grant.
 func (verifier *Verifier) VerifyRequest(request *http.Request) (capability.Grant, error) {
-	if request == nil || request.URL == nil {
-		return capability.Grant{}, capability.ErrInvalidConfiguration
-	}
-	digest := []byte(nil)
-	if verifier.bodyDigest != nil {
-		var err error
-		digest, err = verifier.bodyDigest(request)
-		if err != nil {
-			return capability.Grant{}, redact(capability.ErrURLBinding, err)
-		}
-	}
-	rawURL := request.URL.RequestURI()
-	if verifier.origin != "" {
-		rawURL = verifier.origin + rawURL
-	}
-	return capability.VerifyURL(request.Context(), capability.URLRequest{
-		Method: request.Method, RawURL: rawURL, BodyDigest: digest,
-	}, verifier.profile, verifier.resolver, capability.VerifyOptions{
-		Now: verifier.clock.Now(), Skew: verifier.skew, Limits: verifier.limits,
-		Revocations: verifier.revocations,
-	})
-}
-
-type safeError struct {
-	kind           error
-	classification error
-}
-
-func (failure *safeError) Error() string { return failure.kind.Error() }
-
-func (failure *safeError) Unwrap() []error {
-	return []error{failure.kind, failure.classification}
-}
-
-func redact(kind, cause error) error {
-	switch {
-	case errors.Is(cause, context.Canceled):
-		return &safeError{kind: kind, classification: context.Canceled}
-	case errors.Is(cause, context.DeadlineExceeded):
-		return &safeError{kind: kind, classification: context.DeadlineExceeded}
-	default:
-		return kind
-	}
+	return verifier.canonical.VerifyRequest(request)
 }
 
 // Middleware verifies and carries a Grant. The next handler remains responsible
-// for Grant.Authorize, Grant.Consume, and the protected side effect ordering.
+// for authorization, consumption, and protected side-effect ordering.
 func (verifier *Verifier) Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		if next == nil {
-			http.Error(writer, "capability handler unavailable", http.StatusInternalServerError)
-			return
-		}
-		grant, err := verifier.VerifyRequest(request)
-		if err != nil {
-			verifier.errorHandler(writer, request, err)
-			return
-		}
-		next.ServeHTTP(writer, request.WithContext(context.WithValue(request.Context(), grantContextKey{}, grant)))
-	})
+	return verifier.canonical.Middleware(next)
 }
 
 // GrantFromContext returns the verified grant carried by Middleware.
 func GrantFromContext(ctx context.Context) (capability.Grant, bool) {
-	if ctx == nil {
-		return capability.Grant{}, false
-	}
-	grant, found := ctx.Value(grantContextKey{}).(capability.Grant)
-	return grant, found
+	return capabilityhttp.GrantFromContext(ctx)
 }
 
-// SignRequest signs req.URL and mutates it only after complete successful issuance.
+// SignRequest signs request.URL after complete successful issuance.
 func SignRequest(
 	ctx context.Context,
 	request *http.Request,
@@ -166,73 +85,5 @@ func SignRequest(
 	limits capability.Limits,
 	bodyDigest []byte,
 ) error {
-	if request == nil || request.URL == nil {
-		return capability.ErrInvalidConfiguration
-	}
-	signed, err := capability.SignURL(ctx, payload, capability.URLRequest{
-		Method: request.Method, RawURL: request.URL.String(), BodyDigest: bodyDigest,
-	}, profile, signer, limits)
-	if err != nil {
-		return err
-	}
-	parsed, _ := url.Parse(signed)
-	request.URL = parsed
-	return nil
-}
-
-func validateOrigin(raw string, profile capability.URLProfile) (string, error) {
-	absoluteProfile := len(profile.AllowedSchemes) > 0
-	if absoluteProfile != (raw != "") {
-		return "", capability.ErrInvalidConfiguration
-	}
-	if raw == "" {
-		return "", nil
-	}
-	origin, err := url.Parse(raw)
-	if err != nil {
-		return "", capability.ErrInvalidConfiguration
-	}
-	if !origin.IsAbs() {
-		return "", capability.ErrInvalidConfiguration
-	}
-	if origin.User != nil {
-		return "", capability.ErrInvalidConfiguration
-	}
-	if origin.Host == "" {
-		return "", capability.ErrInvalidConfiguration
-	}
-	if origin.Path != "" {
-		return "", capability.ErrInvalidConfiguration
-	}
-	if origin.RawQuery != "" {
-		return "", capability.ErrInvalidConfiguration
-	}
-	if origin.ForceQuery {
-		return "", capability.ErrInvalidConfiguration
-	}
-	if origin.Fragment != "" {
-		return "", capability.ErrInvalidConfiguration
-	}
-	if raw != origin.Scheme+"://"+origin.Host {
-		return "", capability.ErrInvalidConfiguration
-	}
-	if origin.Host != strings.ToLower(origin.Host) {
-		return "", capability.ErrInvalidConfiguration
-	}
-	if !contains(profile.AllowedSchemes, origin.Scheme) {
-		return "", capability.ErrInvalidConfiguration
-	}
-	if !contains(profile.AllowedAuthorities, origin.Host) {
-		return "", capability.ErrInvalidConfiguration
-	}
-	return origin.String(), nil
-}
-
-func contains(values []string, candidate string) bool {
-	for _, value := range values {
-		if value == candidate {
-			return true
-		}
-	}
-	return false
+	return capabilityhttp.SignRequest(ctx, request, payload, profile, signer, limits, bodyDigest)
 }

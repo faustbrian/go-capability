@@ -24,15 +24,19 @@ import (
     "time"
 
     "github.com/faustbrian/go-capability"
+	"github.com/faustbrian/go-capability/adapters/http"
+	"github.com/faustbrian/go-capability/adapters/memory"
     "github.com/faustbrian/go-capability/caphttp"
     "github.com/faustbrian/go-capability/memory"
     "github.com/faustbrian/go-capability/postgres"
     "github.com/faustbrian/go-capability/valkey"
 )
 
+var _ capability.ConsumptionStore = (*capabilitymemory.ConsumptionStore)(nil)
 var _ capability.ConsumptionStore = (*memory.ConsumptionStore)(nil)
 var _ capability.ConsumptionStore = (*postgres.ConsumptionStore)(nil)
 var _ capability.ConsumptionStore = (*valkey.ConsumptionStore)(nil)
+var _ = capabilityhttp.SignRequest
 var _ = caphttp.SignRequest
 
 func TestIssueVerifyAuthorize(t *testing.T) {

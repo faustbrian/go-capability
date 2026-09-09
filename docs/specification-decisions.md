@@ -380,6 +380,7 @@ Exact bindings: caphttp.Verifier verifies before calling the next handler and le
 
 | Reviewed | Authority | Disposition | Decision impact |
 | --- | --- | --- | --- |
+| 2026-09-09 | RFC 9110 Erratum 9164 | Behavior-neutral. The reported Appendix A clarification documents semantically equivalent ABNF normalizations. Capability delegates URL and HTTP syntax to Go's standard library and does not parse, regenerate, or mechanically compare RFC 9110's collected grammar. | No decision is directly implicated. The RFC-citing applicability inventory and all decision and conformance bindings remain unchanged. |
 | 2026-09-03 | RFC 9110 Erratum 9162 | Behavior-neutral. The proposed comma-space spelling concerns combination of repeated HTTP field lines. Capability v1 owns token identity, validity, authorization, signed method, origin and digest dimensions, consumption, revocation, and middleware failure semantics; it neither combines repeated fields nor exposes that operation as a contract. | No decision is directly implicated. The RFC-citing applicability inventory remains `CAPABILITY-DEC-001`, `CAPABILITY-DEC-004`, `CAPABILITY-DEC-005`, `CAPABILITY-DEC-007`, `CAPABILITY-DEC-008`, `CAPABILITY-DEC-009`, and `CAPABILITY-DEC-011`; their decisions and conformance bindings are unchanged. |
 
 ## Unresolved decisions

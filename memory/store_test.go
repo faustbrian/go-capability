@@ -1,4 +1,7 @@
+//nolint:staticcheck // Compatibility proof intentionally exercises the deprecated path.
 package memory_test
+
+//lint:file-ignore SA1019 Compatibility proof intentionally exercises the deprecated path.
 
 import (
 	"context"

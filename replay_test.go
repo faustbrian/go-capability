@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/faustbrian/go-capability"
-	capmemory "github.com/faustbrian/go-capability/memory"
+	capmemory "github.com/faustbrian/go-capability/adapters/memory"
 )
 
 func TestMemoryConsumptionIsAtomicAtTheUseLimit(t *testing.T) {
