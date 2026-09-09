@@ -3,6 +3,7 @@
 package capabilityhttp
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"net/http"
@@ -64,7 +65,7 @@ func NewVerifier(options VerifierOptions) (*Verifier, error) {
 	case nil:
 		return nil, capability.ErrInvalidConfiguration
 	}
-	if options.Skew < 0 {
+	if cmp.Less(options.Skew, time.Duration(0)) {
 		return nil, capability.ErrInvalidConfiguration
 	}
 	if err := options.Profile.Validate(options.Limits); err != nil {
