@@ -18,8 +18,6 @@ import (
 )
 
 func TestNewVerifierRejectsInvalidDependencies(t *testing.T) {
-	t.Parallel()
-
 	profile := capability.URLProfile{
 		Name:               "relative-v1",
 		SignatureParameter: "cap",
@@ -52,8 +50,6 @@ func TestNewVerifierRejectsInvalidDependencies(t *testing.T) {
 
 	for name, options := range tests {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
 			if _, err := capabilityhttp.NewVerifier(options); !errors.Is(err, capability.ErrInvalidConfiguration) {
 				t.Fatalf("NewVerifier() error = %v, want %v", err, capability.ErrInvalidConfiguration)
 			}
