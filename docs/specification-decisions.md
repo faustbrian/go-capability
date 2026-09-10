@@ -123,7 +123,7 @@ Additional authoritative source: `{"id":"rfc4648-source","version":"RFC 4648","u
 | Field | Decision |
 | --- | --- |
 | Status and owner | `resolved`; `capability` maintainers |
-| Source | Go 1.26.6 [`time.Time`](https://pkg.go.dev/time@go1.26.6#Time) and RFC 9110 [date and time](https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.7) as adjacent time representations; neither defines this capability interval |
+| Source | Go 1.27.0 [`time.Time`](https://pkg.go.dev/time@go1.27.0#Time) and RFC 9110 [date and time](https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.7) as adjacent time representations; neither defines this capability interval |
 | Classification | Package-defined temporal authorization policy |
 | Issue | Issued-at, not-before, expiration, integer precision, equality boundaries, skew direction, and maximum lifetime can be interpreted differently even when all parties use Unix seconds. |
 | Credible interpretations | Inclusive expiration; symmetric skew on every field; no lifetime bound; subsecond comparison; or one explicit half-open validity interval with bounded skew. |
@@ -186,7 +186,7 @@ Exact bindings: Verify authenticates encoded authority and Grant.Authorize separ
 | Field | Decision |
 | --- | --- |
 | Status and owner | `resolved`; `capability` maintainers |
-| Source | RFC 3986 [generic syntax](https://www.rfc-editor.org/rfc/rfc3986.html#section-3) and [reference resolution](https://www.rfc-editor.org/rfc/rfc3986.html#section-5), plus Go 1.26.6 [`net/url`](https://pkg.go.dev/net/url@go1.26.6) |
+| Source | RFC 3986 [generic syntax](https://www.rfc-editor.org/rfc/rfc3986.html#section-3) and [reference resolution](https://www.rfc-editor.org/rfc/rfc3986.html#section-5), plus Go 1.27.0 [`net/url`](https://pkg.go.dev/net/url@go1.27.0) |
 | Classification | URI interoperability with defensive package profile |
 | Issue | Raw and parsed URLs can disagree around userinfo, default ports, case, escaped paths, dot segments, encoded slashes, duplicate query values, fragments, relative references, and parameter ordering. Signing one interpretation while routing another enables substitution and smuggling. |
 | Credible interpretations | Sign raw text; sign decoded components; let the HTTP stack normalize; accept first or last duplicate; or define one strict profile and reject every non-canonical alternative. |
@@ -313,7 +313,7 @@ Exact bindings: Verification submits an exact bounded RevocationQuery and outage
 | Field | Decision |
 | --- | --- |
 | Status and owner | `resolved`; `capability` maintainers |
-| Source | RFC 2104 [key requirements](https://www.rfc-editor.org/rfc/rfc2104.html#section-3), RFC 8032 [keys](https://www.rfc-editor.org/rfc/rfc8032.html#section-5.1.5), and Go 1.26.6 [`context`](https://pkg.go.dev/context@go1.26.6) for cancellation |
+| Source | RFC 2104 [key requirements](https://www.rfc-editor.org/rfc/rfc2104.html#section-3), RFC 8032 [keys](https://www.rfc-editor.org/rfc/rfc8032.html#section-5.1.5), and Go 1.27.0 [`context`](https://pkg.go.dev/context@go1.27.0) for cancellation |
 | Classification | Defensive key lifecycle and remote-provider policy |
 | Issue | Key rotation, overlap, disablement, revocation, unknown IDs, remote latency, stale caches, and provider diagnostics can change acceptance or leak sensitive material. Starting hidden refresh goroutines would obscure ownership. |
 | Credible interpretations | Cache forever; retry or fetch without a bound; try every key; expose provider errors; or use immutable local snapshots and one bounded caller-owned resolution operation. |
@@ -349,7 +349,7 @@ Additional authoritative source: `{"id":"rfc8032-source","version":"RFC 8032","u
 | Field | Decision |
 | --- | --- |
 | Status and owner | `resolved`; `capability` maintainers |
-| Source | RFC 9110 [status codes](https://www.rfc-editor.org/rfc/rfc9110.html#section-15) and Go 1.26.6 [`net/http.Handler`](https://pkg.go.dev/net/http@go1.26.6#Handler) |
+| Source | RFC 9110 [status codes](https://www.rfc-editor.org/rfc/rfc9110.html#section-15) and Go 1.27.0 [`net/http.Handler`](https://pkg.go.dev/net/http@go1.27.0#Handler) |
 | Classification | HTTP adapter policy and application ownership boundary |
 | Issue | Middleware can conflate verification with authorization or consumption, expose token/provider details, read bodies implicitly, commit partial responses, or permit a failed request to reach the application. HTTP does not define one capability error representation. |
 | Credible interpretations | Automatically authorize and consume; pass errors downstream; expose detailed causes; use framework state; or verify only and return one bounded secret-safe adapter response. |
