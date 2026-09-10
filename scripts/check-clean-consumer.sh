@@ -11,7 +11,7 @@ trap cleanup EXIT HUP INT TERM
 
 cd "${consumer}"
 GOWORK=off go mod init example.com/capability-consumer >/dev/null
-GOWORK=off go mod edit -go=1.26.6 \
+GOWORK=off go mod edit -go=1.27.0 \
     -require=github.com/faustbrian/go-capability@v0.0.0 \
     -replace="github.com/faustbrian/go-capability=${module_directory}"
 
