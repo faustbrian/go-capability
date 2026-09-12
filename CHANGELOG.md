@@ -5,6 +5,10 @@ the module follows semantic versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- Register the released public API baseline with the shared compatibility gate while retaining the repository-owned API snapshot oracle.
+
 ### Documentation
 
 - Replace the archived monorepo link with package-owned documentation.
