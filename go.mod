@@ -3,7 +3,7 @@ module github.com/faustbrian/go-capability
 go 1.27.0
 
 require (
-	github.com/jackc/pgx/v5 v5.10.0
+	github.com/jackc/pgx/v5 v5.11.0
 	github.com/valkey-io/valkey-go v1.0.77
 )
 
