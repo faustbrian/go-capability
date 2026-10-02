@@ -5,6 +5,13 @@ the module follows semantic versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- Update PostgreSQL interoperability to pgx 5.11.0, including Go 1.27
+  `database/sql` scanning and driver codec fixes. Callers configuring a
+  pgx-backed database should review its libpq-compatible DSN parsing
+  changes; capability storage semantics and database ownership are unchanged.
+
 ## [1.1.0] - 2026-09-10
 
 ### Added
