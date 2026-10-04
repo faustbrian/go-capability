@@ -21,6 +21,28 @@ the module follows semantic versioning.
 
 ### Changed
 
+- Align CAPABILITY-DEC-008 and CAPABILITY-DEC-009 with finite memory admission,
+  safe capacity classification and explicit revocation-writer error ownership;
+  retain their prior decisions in the history.
+  CAPABILITY-DEC-008 sha256:91cf9947d66ba1104672959458381135bc76806ff30de79e8edb75b63ea64b0a
+  CAPABILITY-DEC-009 sha256:a59ebb80f0a6f22db885258b1ce30173d3ba237443816e0a768114e0f2f6f7e8
+
+- Bound both process-local memory paths by finite record-count and owned
+  retained-string budgets, defaulting to 10,000 records and 4 MiB per store.
+  Add explicit positive-limit constructors; share one allowance across all
+  five revocation maps without eviction. Cleanup releases removed replay
+  admission, while duplicates and monotonic cutoff updates remain successful
+  at capacity. Bound input strings before hashing and clone admitted keys.
+  This next-major behavior requires explicit administrative insertion-error
+  handling and application-owned cleanup/overload policy; signatures of the
+  original constructors remain unchanged.
+
+- Preserve sanitized `ErrCapacity` through `Grant.Consume` as known no-consume
+  policy rather than an unknown commit outcome. Custom adapters must assert
+  that classification only before committing a use; arbitrary diagnostics and
+  causes remain discarded. Revocation-query failures still fail verification
+  closed as `ErrRevocationUnknown`.
+
 - Align CAPABILITY-DEC-008 with issuer-scoped replay, explicit migration and
   the still-open aggregate memory bound; preserve its superseded decision.
   CAPABILITY-DEC-008 sha256:c52bd015b8580939acdd4e948d207792883daf4f6c58fedf17316f0cc4bb94e9

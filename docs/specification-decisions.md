@@ -253,8 +253,8 @@ Exact bindings: Every authority-bearing transport dimension must be explicitly t
 | Credible interpretations | Count in memory everywhere; consume after the side effect; retry every error; treat timeout as rejection; or expose atomic store ownership and unknown outcomes explicitly. |
 | Known peer behavior | Token middleware commonly treats replay as cache membership. Databases and Valkey can acknowledge, time out, or fail at different points around a committed mutation. |
 | Selected behavior | `MaxUses == 0` is reusable for an authenticated grant. Positive values require an explicit `ConsumptionStore` that atomically binds exact issuer/capability-ID identity, expiry, and maximum uses. Missing issuer fails closed. Terminal exhaustion and identity conflicts are distinct; every unclassified store failure is `ErrConsumptionUnknown`. PostgreSQL rejects expired requests against its transaction clock before state writes, without resetting a retained or absent identical grant's quota; future-expiry renewal after row expiry remains supported. The caller owns ordering, idempotency, and reconciliation with the protected side effect. |
-| Security and resource consequences | Atomic consumption prevents concurrent overuse when the selected store is shared by all replicas. Counts are bounded per tuple; memory aggregate admission remains an open boundary. Unknown outcomes fail closed without claiming that no mutation occurred. |
-| Compatibility and wire consequences | Issuer-scoped consumption and explicit durable migration are next-major contracts; token wire is unchanged. Existing ID-only ledgers require proven single-owner backfill or exact legacy-owner mapping and fencing every old writer; unknown ownership requires retirement, not live quota reset. Use count is signed and cannot be changed by storage policy. Process-local memory is not cluster-compatible; PostgreSQL or Valkey is required for shared durable ownership. |
+| Security and resource consequences | Atomic consumption prevents concurrent overuse when the selected store is shared by all replicas. Memory stores enforce finite aggregate record and owned key-string admission without eviction; cleanup releases only removed entries. Unknown outcomes fail closed without claiming that no mutation occurred. |
+| Compatibility and wire consequences | Issuer-scoped consumption, explicit durable migration, and finite memory defaults are next-major contracts; token wire is unchanged. Existing ID-only ledgers require proven single-owner backfill or exact legacy-owner mapping and fencing every old writer; unknown ownership requires retirement, not live quota reset. Use count is signed and cannot be changed by storage policy. Process-local memory is not cluster-compatible; PostgreSQL or Valkey is required for shared durable ownership. |
 | Executable evidence | `TestGrantConsumptionCarriesAuthenticatedIssuer`, `TestBothMemoryPathsIsolateIssuerReplayIdentity`, `TestPostgresIssuerTupleQuotasAndRenewal`, `TestExpiredIdenticalGrantCannotReceiveFreshQuota`, `TestSQLConsumptionBindsBothIdentityParameters`, `TestLegacyMigrationBindsOwnerAndLeavesTransactionCallerOwned`, `TestIssuerReplayKeysPreserveLegacyQuotaAndSeparateNamespaces`, `TestMemoryConsumptionIsAtomicAtTheUseLimit`, `TestConsumptionStoreRejectsConflictingIdentityAndExpiresState`, `TestStoreSerializesConcurrentOneTimeConsumption`, and `TestUnknownConsumptionOutcomeFailsClosed` |
 | Public surface | `Payload.MaxUses`, `Consumption`, `ConsumptionResult`, `ConsumptionStore`, `Grant.Consume`, and memory, PostgreSQL, and Valkey adapters |
 | Upstream record | No referenced standard defines this state machine; RFC 9110 idempotency does not resolve transaction commit ambiguity. |
@@ -272,7 +272,14 @@ store ownership and unknown outcomes explicitly. Documentation bindings:
 `docs/specification-decisions.md` and `docs/replay-and-revocation.md`. RFC 9110
 idempotency does not resolve capability transaction commit ambiguity.
 
-Exact bindings: Positive MaxUses values require an explicit ConsumptionStore that atomically binds exact issuer/capability-ID identity, expiry, and maximum uses. One atomic state owner is required to prevent concurrent overuse. Counts are bounded per tuple; memory aggregate admission remains an open boundary. Issuer-scoped consumption and explicit durable migration are next-major contracts; token wire is unchanged. Process-local memory is not cluster-compatible. Consume after the side effect. Expose atomic store ownership and unknown outcomes explicitly. RFC 9110 idempotency does not resolve capability transaction commit ambiguity.
+Exact bindings: Positive MaxUses values require an explicit ConsumptionStore that atomically binds exact issuer/capability-ID identity, expiry, and maximum uses. One atomic state owner is required to prevent concurrent overuse. Memory stores enforce finite aggregate record and owned key-string admission without eviction; cleanup releases only removed entries. Issuer-scoped consumption, explicit durable migration, and finite memory defaults are next-major contracts; token wire is unchanged. Process-local memory is not cluster-compatible. Consume after the side effect. Expose atomic store ownership and unknown outcomes explicitly. RFC 9110 idempotency does not resolve capability transaction commit ambiguity.
+
+Finite admission adds `ErrCapacity`, `capabilitymemory.StoreLimits` and
+`capabilitymemory.NewConsumptionStoreWithLimits`. Ordinary evidence is
+`TestMemoryReplayFiniteAdmissionAndAccounting`,
+`TestGrantConsumptionPreservesSafeCapacityClassification`, and
+`TestBothMemoryReplayPathsReleaseOnlyRemovedBytesAndRenewExpiredIdentity`.
+These test definitions are not production memory sizing or release evidence.
 
 ## CAPABILITY-DEC-009: Revocation matching and consistency
 
@@ -285,7 +292,7 @@ Exact bindings: Positive MaxUses values require an explicit ConsumptionStore tha
 | Credible interpretations | Revoke only IDs; infer hierarchy; fail open on outage; promise instant consistency; or expose exact match dimensions and let adapters document consistency. |
 | Known peer behavior | Token systems use deny lists, key removal, short expiry, epochs, or provider introspection with different propagation guarantees. None determines this package's local contract. |
 | Selected behavior | Verification submits an exact bounded `RevocationQuery` containing capability ID, key ID, subject, issuer, tenant, resource, and issued-at. A checker may match any documented dimension or a monotonic issued-before cutoff. Outage and cancellation fail closed. The memory implementation is explicitly process-local and no adapter may imply stronger consistency than it provides. |
-| Security and resource consequences | Exact dimensions prevent accidental wildcard broadening, while fail-closed outages avoid accepting known-unverifiable grants. Queries and retained process-local entries are bounded by application policy. |
+| Security and resource consequences | Exact dimensions prevent accidental wildcard broadening, while fail-closed outages avoid accepting known-unverifiable grants. All five memory revocation maps share finite record and owned key-string budgets; input lengths are admitted before hashing. |
 | Compatibility and wire consequences | Revocation does not alter token bytes. Acceptance can differ across replicas only within the configured store's documented propagation window; deployments must account for that window. |
 | Executable evidence | `TestVerificationChecksEveryRevocationBoundary`, `TestRevocationOutageAndCancellationFailClosed`, and `TestRevocationsValidateAndKeepMonotonicCutoff` |
 | Public surface | `RevocationQuery`, `RevocationChecker`, `VerifyOptions.Revocations`, and `memory.Revocations` |
@@ -306,7 +313,16 @@ bindings: `docs/specification-decisions.md` and
 `docs/replay-and-revocation.md`. There is no upstream capability-v1 revocation
 standard.
 
-Exact bindings: Verification submits an exact bounded RevocationQuery and outage or cancellation fails closed. Exact dimensions avoid wildcard broadening and explicit outages avoid silent acceptance. Exact dimensions prevent accidental wildcard broadening. Deployments must account for the configured store's propagation window. Expose exact match dimensions and let adapters document consistency. There is no upstream capability-v1 revocation standard.
+Exact bindings: Verification submits an exact bounded RevocationQuery and outage or cancellation fails closed. Exact dimensions avoid wildcard broadening and explicit outages avoid silent acceptance. Exact dimensions prevent accidental wildcard broadening. Trusted administrative writers must handle insertion capacity errors; deployments must account for the configured store's propagation window. Expose exact match dimensions and let adapters document consistency. There is no upstream capability-v1 revocation standard.
+
+Finite admission adds `capabilitymemory.StoreLimits` and
+`capabilitymemory.NewRevocationsWithLimits`. Ordinary evidence is
+`TestMemoryRevocationsAggregateAdmissionAndMonotonicUpdates`,
+`TestMemoryStringAdmissionAndInvalidLimits`, and
+`TestBothMemoryRevocationPathsFailClosedDuringRealVerification`. Duplicates and
+monotonic cutoff updates need no further admission; administrative writers must
+handle refusal, with no eviction or permanent failure latch. See
+[admission ownership](replay-and-revocation.md#finite-process-local-admission).
 
 ## CAPABILITY-DEC-010: Key resolution and lifecycle snapshots
 

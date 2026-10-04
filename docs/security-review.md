@@ -2,21 +2,27 @@
 
 ## Model revision and source scope
 
-Repository threat model revision **4**, dated **2026-10-04**, covers
+Repository threat model revision **5**, dated **2026-10-04**, covers
 `github.com/faustbrian/go-capability` at baseline commit
-`402a122e5cc11c281961b50f5dffe0323a2e598b` plus the replay identity correction
+`59e1734a605d8fadcc6715e216122d5e185eb3c9` plus the finite memory admission correction
 identified by these immutable runtime Git blobs:
 
 | Source | Git blob |
 | --- | --- |
-| `replay.go` | `ca199d1d55ff2137c7144164b87a52c1054ef5e4` |
-| `adapters/memory/consumption.go` | `5f348123bef6ff36960e6ffe7f08e51ab69b4eba` |
-| `postgres/store.go` | `acfd096c834335bdb064780ce1d18ec72f23dcbd` |
-| `postgres/migration.go` | `9ce9fc191f9a46aca1d24de5ceadd08ff5dc2bec` |
-| `valkey/store.go` | `f0724d81823214d11397c9a61988ad1a4b64972c` |
+| `replay.go` | `7d237e85fcb5c246b6ff40b23750e259a5c32d89` |
+| `errors.go` | `4a63cac3e70d50b9bbb6f3dd848152f04b03f3dc` |
+| `adapters/memory/consumption.go` | `3518579fbc8c25e0e54d765451a7c4a2ac6afb41` |
+| `adapters/memory/revocation.go` | `cfbae4bddcdb3fcdd64496e5254fc688fc06f1fc` |
+| `adapters/memory/limits.go` | `6dcd36427c555c33734236cfc18f6448554bcd9f` |
+| `memory/consumption.go` | `b03eb95c711dc5257c14afe072b2c267a2e08c19` |
+| `memory/revocation.go` | `d2ac7c00793ace8bddb92fe13a09fb9cb54d5125` |
+| `memory/limits.go` | `87e9e564ea0d423875103822e419940a57d970eb` |
 
 All other runtime source is unchanged from that baseline, which includes the
-revision 2 policy-error and revision 3 strict issuer corrections. These are inspected immutable
+revision 2 policy-error, revision 3 strict issuer, and revision 4 replay identity
+corrections. Revision 4 covered baseline
+`402a122e5cc11c281961b50f5dffe0323a2e598b` and the replay correction integrated
+into this baseline. These are inspected immutable
 source identities, not a prospective documentation commit, release, or
 deployment identity. Revision 1 covered the unchanged runtime at
 `4a9574a4b5903b86b43bdfb8424c8faa3db885cf` and its reporting-policy link.
@@ -91,14 +97,19 @@ because a token verifies.
   allowlisted query, expiry, profile name, and optional body digest.
 - Replay adapters own atomic compare-and-increment; non-policy failures are
   surfaced as unknown outcomes.
+- Both memory paths enforce finite record-count and cloned retained-key-string
+  admission before hashing/copying. Revocations share one aggregate allowance
+  across five maps and never evict; cleanup releases exact removed replay
+  charges. Defaults are finite, not a byte-exact total heap claim. Trusted
+  administrative writers must handle refused insertions.
 - Revocation errors fail closed and consistency remains a store property.
 - Redacted operational error paths expose stable categories and retain only
   the safe `context.Canceled` or `context.DeadlineExceeded` classification.
   Arbitrary
   signer, verifier, resolver, store, and body-digest causes are not
   retained in those error graphs because their diagnostics may contain secrets.
-  `Grant.Consume` normalizes replay-policy errors while preserving both policy
-  classifications when both match and applying the existing safe context
+  `Grant.Consume` normalizes replay-policy and known-no-consume capacity errors
+  while preserving matching supported policy classifications and applying the existing safe context
   precedence. Bare replay-policy sentinels retain their identity. Direct store
   calls are not covered by that redaction guarantee.
 - Trusted resolver policy failures preserve the stable `ErrUnknownKey` and
@@ -240,11 +251,15 @@ Each owner must reassess its entry at the stated review condition.
 
 - **Owner:** integrating application owner.
 - **Rationale:** parser limits do not rate-limit requests or bound all lifetime
-  state. Memory consumption needs cleanup; memory revocations have no removal
-  API. Deadlines depend on trusted callbacks and clients honoring cancellation.
+  costs. Memory stores now have finite record and owned string budgets, but
+  overhead and caller input are additional. Replay still needs safe cleanup;
+  revocations have no removal API and eventually refuse new insertions.
+  Deadlines depend on trusted callbacks and clients honoring cancellation.
 - **Mitigation:** select finite input limits, bound ingress and concurrency,
   enforce deadlines in callbacks and clients, bound issuance and administrative
-  revocation rates, and plan replay cleanup and revocation-store lifecycle.
+  revocation rates, size finite store and query budgets, handle every
+  administrative insertion error, and plan safe replay cleanup, overload
+  handling and revocation-store lifecycle without discarding live authority.
 - **Review condition:** limit increases, traffic or retention changes, new
   callbacks or clients, or resource exhaustion and cancellation failures.
 
@@ -291,12 +306,12 @@ not accepted findings merely because integration precautions are possible:
   fencing, retained counters, rollback and multi-issuer deployment have not
   been established by source tests. [Migration requirements](adoption.md#issuer-scoped-replay-next-major)
   cannot be replaced with a new key formula or an inferred owner.
-- The memory consumption and revocation stores have no finite entry-count or
-  aggregate retained-byte admission. Their direct APIs also retain caller
-  strings without an explicit byte budget. Cleanup and application ingress
-  controls can reduce exposure but do not establish the ecosystem goal's
-  package-owned finite-memory requirement. R7 records integration precautions,
-  not closure of this source limitation.
+- Finite record and owned retained-string admission now exist in both memory
+  paths. Their ordinary source-boundary regressions do not establish exact heap
+  usage, load/cancellation campaigns, operator cleanup correctness, ignored
+  administrative-error recovery or production overload behavior. R7 retains
+  those application responsibilities; no memory source limit closes release,
+  publication or the whole ecosystem security goal by itself.
 - Current-source hostile-input execution, scanner results, dependency and
   secret-scan status, release/clean-consumer verification, and production
   topology exercises are not established by this documentation assessment.
@@ -343,3 +358,11 @@ issued grant accepted within verification skew; neither may regain quota.
 Future-expiry renewal is a separate oracle. These are source-boundary results,
 not an executed PostgreSQL migration, Valkey script/service qualification,
 old-writer fence, persisted-counter audit or published-consumer result.
+
+Revision 5 adds [ordinary finite-admission tests](../memory_capacity_test.go)
+through both public memory paths, including count/byte refusal, aggregate
+revocation accounting, duplicates, monotonic cutoff updates, cleanup/renewal,
+and real `Grant.Consume` and `Verify` outcomes. Safe capacity classifications
+discard arbitrary adapter diagnostics/causes; custom adapters remain trusted
+to assert no committed use. This is not service, stress, race, scanner,
+production memory sizing, or published-consumer qualification.

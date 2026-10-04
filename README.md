@@ -135,6 +135,12 @@ process-local adapters. They are suitable only when one process owns all
 decisions. They do not provide cluster coordination or instant global
 revocation.
 
+Both memory paths now default to 10,000 records and 4 MiB of retained key strings
+per store, with explicit positive `StoreLimits` constructors for other finite
+budgets. Revocations share one allowance across all five maps and never evict.
+Handle administrative insertion errors; `ErrCapacity` from `Grant.Consume`
+means no use committed. See [finite admission and cleanup ownership](docs/replay-and-revocation.md#finite-process-local-admission).
+
 Revocation checks can match capability ID, signing key ID, subject, exact
 issuer/tenant/resource, or an issuer-wide issued-before cutoff. Remote stores
 must document their consistency and maximum stale-acceptance window.

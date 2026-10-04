@@ -109,3 +109,9 @@ operation, tenant, and all caveats. Consumption is a fourth explicit step for
 bounded-use grants and binds the authenticated issuer/ID tuple to its signed
 maximum and expiry. Middleware may carry a verified `Grant`, but applications
 must keep the final authorization and protected side effect visible.
+
+Process-local memory stores impose finite record and owned key-string budgets
+before copying or hashing inputs. Capacity refusal is a known no-consume outcome;
+administrative revocation writers must handle insertion errors. These limits do
+not add process-wide durability, distributed revocation, or transactional side
+effects. See [finite admission](replay-and-revocation.md#finite-process-local-admission).

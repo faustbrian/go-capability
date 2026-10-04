@@ -56,6 +56,16 @@ ownership or old-grant retirement. See [migration](adoption.md#issuer-scoped-rep
 process-local revocation sets. PostgreSQL and Valkey remain domain-owned paths
 because they own the capability replay model and atomic consumption behavior.
 
+Both memory paths expose `StoreLimits`, `DefaultStoreLimits`,
+`NewConsumptionStoreWithLimits(clock, limits)` and
+`NewRevocationsWithLimits(limits)`. Positive limits bound record count and
+retained key-string bytes; the five revocation maps share one allowance.
+The simple constructors keep their signatures with finite defaults of 10,000
+records and 4 MiB per store. Capacity refusal never evicts an admitted entry.
+Administrative revocation callers must handle insertion errors explicitly.
+Input strings, including aggregate revocation-query fields, are bounded before
+map hashing. See [admission and cleanup ownership](replay-and-revocation.md#finite-process-local-admission).
+
 ## HTTP
 
 `adapters/http.Verifier` requires static trusted `VerifierOptions.Issuer`,
@@ -87,12 +97,14 @@ safe `context.Canceled` and `context.DeadlineExceeded` classifications are
 retained. Trusted resolver policy failures are normalized to `ErrUnknownKey`
 or `ErrAlgorithmMismatch`.
 
-`Grant.Consume` also sanitizes store errors matching `ErrReplayExhausted` or
-`ErrReplayConflict`. Use `errors.Is` for those policy classifications and safe
-context classifications; arbitrary store diagnostics and causes are discarded.
+`Grant.Consume` also sanitizes store errors matching `ErrReplayExhausted`,
+`ErrReplayConflict`, or `ErrCapacity`. Use `errors.Is` for policy and safe context
+classifications; arbitrary store diagnostics and causes are discarded.
 Bare replay-policy sentinels retain their identity, but wrapped store errors
-are no longer returned unchanged. If a store error matches both replay-policy
-sentinels, both safe classifications are preserved. As on other redacted paths,
+are no longer returned unchanged. If a store error matches several supported
+policy sentinels, all matching safe classifications are preserved. `ErrCapacity`
+is trusted known-no-consume policy, not an unknown commit outcome. As on other
+redacted paths,
 `context.Canceled` takes precedence when both context classifications match.
 
 This is not a blanket guarantee for every adapter error: direct store calls
