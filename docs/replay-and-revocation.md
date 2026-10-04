@@ -16,6 +16,12 @@ the protected side effect in one database transaction when both can share the
 same durable owner; otherwise design the action to be idempotent and reconcile
 unknown outcomes explicitly.
 
+At the `Grant.Consume` boundary, replay-policy errors are normalized as well:
+`errors.Is` preserves their safe policy and context classifications without
+retaining arbitrary store diagnostic text or causes. Bare replay-policy
+sentinels keep their identity; callers must not depend on the original wrapped
+store error. Direct adapter calls do not provide this redaction boundary.
+
 Expired records may be deleted after `exp` plus the maximum accepted verifier
 clock skew and any store replication delay. Cleanup is operational maintenance,
 not part of correctness for a live capability.

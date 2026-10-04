@@ -67,10 +67,16 @@ safe `context.Canceled` and `context.DeadlineExceeded` classifications are
 retained. Trusted resolver policy failures are normalized to `ErrUnknownKey`
 or `ErrAlgorithmMismatch`.
 
-This is not a blanket guarantee for every adapter error. Direct store calls
-can return raw client errors, and `Grant.Consume` returns the original store
-error when `errors.Is` matches `ErrReplayExhausted` or `ErrReplayConflict`.
-Such a match does not sanitize a wrapped diagnostic. Keep provider diagnostics
-in a separately redacted operational channel, never in capability-facing
-responses. See the [repository security model](security-review.md) for the
-source scope and remaining boundaries.
+`Grant.Consume` also sanitizes store errors matching `ErrReplayExhausted` or
+`ErrReplayConflict`. Use `errors.Is` for those policy classifications and safe
+context classifications; arbitrary store diagnostics and causes are discarded.
+Bare replay-policy sentinels retain their identity, but wrapped store errors
+are no longer returned unchanged. If a store error matches both replay-policy
+sentinels, both safe classifications are preserved. As on other redacted paths,
+`context.Canceled` takes precedence when both context classifications match.
+
+This is not a blanket guarantee for every adapter error: direct store calls
+can still return raw client errors. Keep provider diagnostics in a separately
+redacted operational channel, never in capability-facing responses. See the
+[repository security model](security-review.md) for source scope and remaining
+boundaries.

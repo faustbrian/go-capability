@@ -2,12 +2,16 @@
 
 ## Model revision and source scope
 
-Repository threat model revision **1**, dated **2026-10-04**, describes
-`github.com/faustbrian/go-capability` at source commit
-`4a9574a4b5903b86b43bdfb8424c8faa3db885cf`. Its runtime source is unchanged
-from `31d7c24aec0563cc6ba1df0850d5e19054440bfe`; the intervening change is
-the reporting-policy link in `SECURITY.md`. These are inspected source
-identities, not a prospective documentation commit or a deployment identity.
+Repository threat model revision **2**, dated **2026-10-04**, covers
+`github.com/faustbrian/go-capability` at baseline commit
+`8e86e00969f59c662ee944d459bdeb693dd1bac7` plus the `Grant.Consume`
+policy-error correction identified by the `replay.go` Git blob
+`86176bb07c86b6ee84194aea4ad3c90b81998daf`.
+Other runtime source is unchanged from
+`31d7c24aec0563cc6ba1df0850d5e19054440bfe`. These are inspected immutable
+source identities, not a prospective documentation commit, release, or
+deployment identity. Revision 1 covered the unchanged runtime at
+`4a9574a4b5903b86b43bdfb8424c8faa3db885cf` and its reporting-policy link.
 
 The published `v1.1.1` tag identifies
 `3fc043661119b72a4c5887b6bff9feab402ac910`, not this main-source baseline.
@@ -17,9 +21,10 @@ or the accepted deployment assumptions change. Model revisions are distinct
 from module versions and do not require a module release by themselves.
 
 The [protocol narrative](protocol.md#threat-model) and the residual-risk
-register below form this repository model. It is a source-level assessment,
-not a vulnerability scan, an independent cryptographic audit, a statement of
-executed test results, or completion of the ecosystem security goal.
+register below form this repository model. It is a source-level assessment
+with a narrowly scoped policy-error regression, not a vulnerability scan,
+an independent cryptographic audit, a statement that broad security gates
+passed, or completion of the ecosystem security goal.
 
 ## Assets, attackers, and trust boundaries
 
@@ -77,10 +82,12 @@ because a token verifies.
 - Redacted operational error paths expose stable categories and retain only
   the safe `context.Canceled` or `context.DeadlineExceeded` classification.
   Arbitrary
-  signer, verifier, resolver, non-policy store, and body-digest causes are not
+  signer, verifier, resolver, store, and body-digest causes are not
   retained in those error graphs because their diagnostics may contain secrets.
-  Direct store calls and consumption errors matching replay-policy categories
-  are not covered by that redaction guarantee.
+  `Grant.Consume` normalizes replay-policy errors while preserving both policy
+  classifications when both match and applying the existing safe context
+  precedence. Bare replay-policy sentinels retain their identity. Direct store
+  calls are not covered by that redaction guarantee.
 - Trusted resolver policy failures preserve the stable `ErrUnknownKey` and
   `ErrAlgorithmMismatch` categories through bounded resolver layers without
   retaining a resolver's arbitrary diagnostic error.
@@ -148,8 +155,8 @@ Each owner must reassess its entry at the stated review condition.
 - **Mitigation:** TLS, secret-safe storage, short lifetimes, narrow grants,
   independently authenticated subject binding where appropriate, and token,
   URL, referrer, log, trace, and audit redaction. Treat direct adapter errors
-  and trusted callbacks' diagnostics as sensitive; do not expose them merely
-  because an error matches a replay-policy category.
+  and trusted callbacks' diagnostics as sensitive; direct adapter errors must
+  not be exposed merely because they match a replay-policy category.
 - **Review condition:** any transport, logging, analytics, payload-content, or
   capability-distribution change, or suspected token disclosure.
 
@@ -287,5 +294,8 @@ operational key material.
 
 Revision 1 records source and test-definition inspection only. No tests,
 benchmarks, fuzz campaigns, scanners, or runtime services were executed to
-produce it. Claims of passed gates must refer to attributable results for the
-relevant immutable source and environment rather than to this inventory.
+produce it. Revision 2 adds the policy-error correction and focused
+[ordinary-input consumption tests](../consumption_policy_test.go); it does not
+establish runtime-service, scanner, or broad hostile-input results. Claims of
+passed gates must refer to attributable results for the relevant immutable
+source and environment rather than to this inventory.

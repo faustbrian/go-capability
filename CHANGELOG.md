@@ -5,6 +5,15 @@ the module follows semantic versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- Sanitize wrapped replay-policy errors returned by `Grant.Consume`, preserving
+  `errors.Is` policy and safe context classifications without exposing store
+  diagnostics or arbitrary causes. Bare policy sentinels retain their identity;
+  callers inspecting the original wrapped store error must use the stable
+  classifications instead. Use accounting and unknown-outcome behavior are
+  unchanged; direct adapter errors remain caller-owned.
+
 ### Changed
 
 - Update PostgreSQL interoperability to pgx 5.11.0, including Go 1.27
