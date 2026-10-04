@@ -7,18 +7,26 @@ versions and digests are recorded in the
 
 ## Threat model
 
+The versioned [repository security model](security-review.md) records the
+inspected source, trust boundaries, conditional residual risks and owners,
+review conditions, and evidence gaps. This narrative states the protocol's
+intended protections, not a claim that all security gates have passed.
+
 A capability is a bearer secret unless `sub` binds it to an independently
 authenticated subject. Theft permits every encoded operation until expiry,
 revocation, or exhaustion. TLS, secret-safe storage, referrer and access-log
 redaction, short lifetimes, narrow resources, narrow audiences, and atomic use
 limits are deployment requirements, not properties supplied by the signature.
 
-The format defends against payload tampering, capability widening, algorithm
-downgrade, parser differentials, URL parameter smuggling, authority
-substitution, traversal ambiguity, and bounded replay when a suitable store is
-used. It does not hide payload contents, authenticate a human, decide business
-policy, guarantee global revocation consistency, or prove who signed a token in
-a legal sense.
+Canonical parsing, algorithm binding, exact authorization, and URL policy are
+designed to reject payload tampering, capability widening, algorithm downgrade,
+parser differentials, URL parameter smuggling, authority substitution, and
+traversal ambiguity at this package's boundary. Bounded replay also requires
+explicit consumption through a suitable store with a correctly isolated
+capability-ID namespace. Verification alone does not establish issuer policy,
+consume a use, or protect a business side effect. The format does not hide
+payload contents, authenticate a human, decide business policy, guarantee global
+revocation consistency, or prove who signed a token in a legal sense.
 
 ## Payload v1
 
