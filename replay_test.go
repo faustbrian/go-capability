@@ -129,8 +129,8 @@ func verifiedGrantWithMaxUses(t *testing.T, maxUses uint32) capability.Grant {
 		t.Fatalf("Issue() error = %v", err)
 	}
 	grant, err := capability.Verify(context.Background(), token, capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: verifier}, nil
-	}), capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()})
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier}, nil
+	}), capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()})
 	if err != nil {
 		t.Fatalf("Verify() error = %v", err)
 	}

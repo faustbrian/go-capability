@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/faustbrian/go-capability"
 )
@@ -28,6 +29,8 @@ type ErrorHandler func(http.ResponseWriter, *http.Request, error)
 
 // VerifierOptions configures signed-URL verification for one immutable profile.
 type VerifierOptions struct {
+	// Issuer is the required trusted namespace, never inferred from the request.
+	Issuer       string
 	Profile      capability.URLProfile
 	Resolver     capability.Resolver
 	Origin       string
@@ -41,6 +44,7 @@ type VerifierOptions struct {
 
 // Verifier verifies request URLs and attaches authenticated grants to context.
 type Verifier struct {
+	issuer       string
 	profile      capability.URLProfile
 	resolver     capability.Resolver
 	origin       string
@@ -57,6 +61,14 @@ type grantContextKey struct{}
 // NewVerifier validates an HTTP integration. Origin is trusted static external
 // configuration for absolute profiles; request forwarding headers are ignored.
 func NewVerifier(options VerifierOptions) (*Verifier, error) {
+	if options.Issuer == "" || len(options.Issuer) > options.Limits.MaxFieldBytes || !utf8.ValidString(options.Issuer) {
+		return nil, capability.ErrInvalidConfiguration
+	}
+	for _, character := range options.Issuer {
+		if character < 0x20 || character == 0x7f {
+			return nil, capability.ErrInvalidConfiguration
+		}
+	}
 	switch options.Resolver {
 	case nil:
 		return nil, capability.ErrInvalidConfiguration
@@ -85,6 +97,7 @@ func NewVerifier(options VerifierOptions) (*Verifier, error) {
 		}
 	}
 	return &Verifier{
+		issuer:  options.Issuer,
 		profile: options.Profile, resolver: options.Resolver, origin: origin,
 		clock: options.Clock, skew: options.Skew, limits: options.Limits,
 		revocations: options.Revocations, bodyDigest: options.BodyDigest,
@@ -112,7 +125,8 @@ func (verifier *Verifier) VerifyRequest(request *http.Request) (capability.Grant
 	return capability.VerifyURL(request.Context(), capability.URLRequest{
 		Method: request.Method, RawURL: rawURL, BodyDigest: digest,
 	}, verifier.profile, verifier.resolver, capability.VerifyOptions{
-		Now: verifier.clock.Now(), Skew: verifier.skew, Limits: verifier.limits,
+		Issuer: verifier.issuer,
+		Now:    verifier.clock.Now(), Skew: verifier.skew, Limits: verifier.limits,
 		Revocations: verifier.revocations,
 	})
 }

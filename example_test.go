@@ -21,11 +21,11 @@ func ExampleIssue() {
 		ID: "example-capability",
 	}
 	token, _ := capability.Issue(context.Background(), payload, signer, capability.DefaultLimits())
-	keys, _ := capability.NewKeySet([]capability.Key{{ID: "example-key", Verifier: verifier}})
-	grant, _ := capability.Verify(context.Background(), token, keys, capability.VerifyOptions{
+	keys, _ := capability.NewKeySet([]capability.Key{{Issuer: "https://issuer.example", ID: "example-key", Verifier: verifier}})
+	grant, _ := capability.Verify(context.Background(), token, keys, capability.VerifyOptions{Issuer: "https://issuer.example",
 		Now: now, Limits: capability.DefaultLimits(),
 	})
-	err := grant.Authorize(capability.Use{
+	err := grant.Authorize(capability.Use{Issuer: "https://issuer.example",
 		Audience: "download", Resource: "reports/42", Operation: "download",
 	})
 	fmt.Println(err == nil)

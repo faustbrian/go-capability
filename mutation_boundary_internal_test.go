@@ -187,9 +187,9 @@ func TestClockSkewExtendsExclusiveExpiry(t *testing.T) {
 	payload := internalPayload()
 	token, _ := Issue(context.Background(), payload, signer, DefaultLimits())
 	resolver := ResolverFunc(func(context.Context, string, Algorithm) (ResolvedKey, error) {
-		return ResolvedKey{Verifier: verifier}, nil
+		return ResolvedKey{Issuer: "issuer", Verifier: verifier}, nil
 	})
-	if _, err := Verify(context.Background(), token, resolver, VerifyOptions{
+	if _, err := Verify(context.Background(), token, resolver, VerifyOptions{Issuer: "issuer",
 		Now: payload.ExpiresAt.Add(30 * time.Second), Skew: time.Minute, Limits: DefaultLimits(),
 	}); err != nil {
 		t.Fatalf("Verify(within expiry skew) error = %v", err)

@@ -20,7 +20,14 @@ a JWT or PASETO replacement, payload encryption, DRM, or legal
 non-repudiation. Applications remain responsible for authenticating callers
 and authorizing each attempted use of a verified grant.
 
-## Install
+Current main and the examples below require explicit issuer configuration as a
+breaking change for the next major; they do not describe the published v1 API.
+The v1 install command below selects the existing published API, whose issuer
+option fields differ from these unreleased examples. No next-major tag or
+import path is claimed here. See the
+[major adoption guidance](docs/adoption.md#explicit-issuer-policy-next-major).
+
+## Install (published v1)
 
 ```sh
 go get github.com/faustbrian/go-capability@v1
@@ -60,12 +67,13 @@ payload := capability.Payload{
 }
 token, _ := capability.Issue(ctx, payload, signer, capability.DefaultLimits())
 
-keys, _ := capability.NewKeySet([]capability.Key{{ID: "2026-08", Verifier: verifier}})
+keys, _ := capability.NewKeySet([]capability.Key{{Issuer: "https://issuer.example", ID: "2026-08", Verifier: verifier}})
 grant, _ := capability.Verify(ctx, token, keys, capability.VerifyOptions{
-    Now: now, Skew: time.Minute, Limits: capability.DefaultLimits(),
+    Issuer: "https://issuer.example", Now: now, Skew: time.Minute, Limits: capability.DefaultLimits(),
 })
 
 err := grant.Authorize(capability.Use{
+    Issuer: "https://issuer.example",
     Audience: "download-service",
     Resource: "documents/report-42",
     Operation: "download",
@@ -73,7 +81,8 @@ err := grant.Authorize(capability.Use{
 ```
 
 `Parse` only establishes canonical structure. `Verify` authenticates the token,
-checks time, key lifecycle, and optional revocation policy. `Authorize` checks
+checks the explicitly selected issuer and key owner, time, key lifecycle, and
+optional revocation policy. `Authorize` checks the explicit attempted issuer and
 the concrete resource operation. A bounded capability must additionally call
 `Grant.Consume` against an atomic store before performing the protected side
 effect.

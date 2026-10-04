@@ -13,8 +13,8 @@ import (
 func TestKeySetBindsKeyIDsToOneAlgorithmAndLifecycle(t *testing.T) {
 	hmacVerifier, _ := capability.NewHMACSHA256Verifier([]byte("0123456789abcdef0123456789abcdef"))
 	set, err := capability.NewKeySet([]capability.Key{
-		{ID: "current", Verifier: hmacVerifier},
-		{ID: "previous", Verifier: hmacVerifier, Disabled: true, NotAfter: testNow.Add(time.Hour)},
+		{Issuer: "https://issuer.example", ID: "current", Verifier: hmacVerifier},
+		{Issuer: "https://issuer.example", ID: "previous", Verifier: hmacVerifier, Disabled: true, NotAfter: testNow.Add(time.Hour)},
 	})
 	if err != nil {
 		t.Fatalf("NewKeySet() error = %v", err)
@@ -29,7 +29,7 @@ func TestKeySetBindsKeyIDsToOneAlgorithmAndLifecycle(t *testing.T) {
 	if _, err := set.Resolve(context.Background(), "current", capability.Ed25519); !errors.Is(err, capability.ErrAlgorithmMismatch) {
 		t.Fatalf("Resolve(wrong algorithm) error = %v", err)
 	}
-	if _, err := capability.NewKeySet([]capability.Key{{ID: "same", Verifier: hmacVerifier}, {ID: "same", Verifier: hmacVerifier}}); !errors.Is(err, capability.ErrInvalidConfiguration) {
+	if _, err := capability.NewKeySet([]capability.Key{{Issuer: "https://issuer.example", ID: "same", Verifier: hmacVerifier}, {Issuer: "https://issuer.example", ID: "same", Verifier: hmacVerifier}}); !errors.Is(err, capability.ErrInvalidConfiguration) {
 		t.Fatalf("NewKeySet(duplicate ID) error = %v", err)
 	}
 }
@@ -37,7 +37,8 @@ func TestKeySetBindsKeyIDsToOneAlgorithmAndLifecycle(t *testing.T) {
 func TestKeySetAcceptsAnOpenEndedNotBeforeBoundary(t *testing.T) {
 	hmacVerifier, _ := capability.NewHMACSHA256Verifier([]byte("0123456789abcdef0123456789abcdef"))
 	set, err := capability.NewKeySet([]capability.Key{{
-		ID: "future", Verifier: hmacVerifier, NotBefore: testNow,
+		Issuer: "https://issuer.example",
+		ID:     "future", Verifier: hmacVerifier, NotBefore: testNow,
 	}})
 	if err != nil {
 		t.Fatalf("NewKeySet() error = %v", err)
@@ -55,7 +56,7 @@ func TestBoundedResolverRestrictsAlgorithmsKeyIDsAndDuration(t *testing.T) {
 		case <-ctx.Done():
 			return capability.ResolvedKey{}, ctx.Err()
 		case <-time.After(time.Second):
-			return capability.ResolvedKey{Verifier: hmacVerifier}, nil
+			return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: hmacVerifier}, nil
 		}
 	})
 	resolver, err := capability.NewBoundedResolver(capability.BoundedResolverOptions{
@@ -80,17 +81,17 @@ func TestResolverConfigurationAndSuccessfulRemoteBinding(t *testing.T) {
 	hmacVerifier, _ := capability.NewHMACSHA256Verifier([]byte("0123456789abcdef0123456789abcdef"))
 	invalidKeys := [][]capability.Key{
 		nil,
-		{{ID: "", Verifier: hmacVerifier}},
-		{{ID: "key"}},
-		{{ID: "key", Verifier: algorithmVerifier{algorithm: "unknown"}}},
-		{{ID: "key", Verifier: hmacVerifier, NotBefore: testNow, NotAfter: testNow}},
+		{{Issuer: "https://issuer.example", ID: "", Verifier: hmacVerifier}},
+		{{Issuer: "https://issuer.example", ID: "key"}},
+		{{Issuer: "https://issuer.example", ID: "key", Verifier: algorithmVerifier{algorithm: "unknown"}}},
+		{{Issuer: "https://issuer.example", ID: "key", Verifier: hmacVerifier, NotBefore: testNow, NotAfter: testNow}},
 	}
 	for index, keys := range invalidKeys {
 		if _, err := capability.NewKeySet(keys); !errors.Is(err, capability.ErrInvalidConfiguration) {
 			t.Fatalf("NewKeySet(%d) error = %v", index, err)
 		}
 	}
-	set, _ := capability.NewKeySet([]capability.Key{{ID: "key", Verifier: hmacVerifier}})
+	set, _ := capability.NewKeySet([]capability.Key{{Issuer: "https://issuer.example", ID: "key", Verifier: hmacVerifier}})
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if _, err := set.Resolve(ctx, "key", capability.HMACSHA256); !errors.Is(err, context.Canceled) {
@@ -134,7 +135,7 @@ func TestResolverConfigurationAndSuccessfulRemoteBinding(t *testing.T) {
 		t.Fatalf("Resolve(nil verifier) error = %v", err)
 	}
 	wrongSource := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: algorithmVerifier{algorithm: capability.Ed25519}}, nil
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: algorithmVerifier{algorithm: capability.Ed25519}}, nil
 	})
 	resolver, _ = capability.NewBoundedResolver(capability.BoundedResolverOptions{
 		Source: wrongSource, Timeout: time.Second, MaxKeyIDBytes: 16,
@@ -147,7 +148,7 @@ func TestResolverConfigurationAndSuccessfulRemoteBinding(t *testing.T) {
 
 func TestBoundedResolverAcceptsExactMaximumKeyIDPolicy(t *testing.T) {
 	hmacVerifier, _ := capability.NewHMACSHA256Verifier([]byte("0123456789abcdef0123456789abcdef"))
-	set, _ := capability.NewKeySet([]capability.Key{{ID: "key", Verifier: hmacVerifier}})
+	set, _ := capability.NewKeySet([]capability.Key{{Issuer: "https://issuer.example", ID: "key", Verifier: hmacVerifier}})
 	resolver, err := capability.NewBoundedResolver(capability.BoundedResolverOptions{
 		Source: set, Timeout: time.Nanosecond, MaxKeyIDBytes: capability.DefaultLimits().MaxFieldBytes,
 		AllowedAlgorithms: []capability.Algorithm{capability.HMACSHA256},
@@ -160,7 +161,7 @@ func TestBoundedResolverAcceptsExactMaximumKeyIDPolicy(t *testing.T) {
 func TestBoundedResolverObservesRotationRemovalWithoutCaching(t *testing.T) {
 	hmacVerifier, _ := capability.NewHMACSHA256Verifier([]byte("0123456789abcdef0123456789abcdef"))
 	var mu sync.RWMutex
-	current := capability.ResolvedKey{Verifier: hmacVerifier}
+	current := capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: hmacVerifier}
 	source := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
 		mu.RLock()
 		defer mu.RUnlock()

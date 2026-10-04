@@ -21,17 +21,17 @@ func TestNewVerifierRejectsInvalidDependencies(t *testing.T) {
 	})
 
 	tests := map[string]VerifierOptions{
-		"nil resolver": {
+		"nil resolver": {Issuer: "https://issuer.example",
 			Profile: profile,
 			Clock:   clock,
 			Limits:  capability.DefaultLimits(),
 		},
-		"nil clock": {
+		"nil clock": {Issuer: "https://issuer.example",
 			Profile:  profile,
 			Resolver: resolver,
 			Limits:   capability.DefaultLimits(),
 		},
-		"negative skew": {
+		"negative skew": {Issuer: "https://issuer.example",
 			Profile:  profile,
 			Resolver: resolver,
 			Clock:    clock,

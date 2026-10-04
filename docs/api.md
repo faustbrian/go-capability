@@ -5,10 +5,11 @@
 1. `CanonicalPayload` validates and encodes one `Payload`.
 2. `Issue` signs that encoding with a `Signer`.
 3. `Parse` checks framing and canonical bytes without returning authority.
-4. `Verify` authenticates the token, time interval, key lifecycle, and optional
-   `RevocationChecker`, returning an immutable `Grant`.
-5. `Grant.Authorize` compares the attempted `Use` audience, subject/bearer mode,
-   resource, operation, tenant, and caveats. It does not check an expected issuer.
+4. `Verify` requires trusted `VerifyOptions.Issuer`, matches the signed issuer
+   and trusted `ResolvedKey.Issuer`, then authenticates the token, time interval,
+   key lifecycle, and optional `RevocationChecker`, returning an immutable `Grant`.
+5. `Grant.Authorize` compares the explicit attempted `Use.Issuer`, audience,
+   subject/bearer mode, resource, operation, tenant, and caveats.
 6. `Grant.Consume` records bounded use through an atomic `ConsumptionStore`.
 
 `Limits` is required on every parser and issuer. `DefaultLimits` is the reviewed
@@ -21,6 +22,14 @@ operations. Constructors bind HMAC-SHA-256 or Ed25519 to the correct standard
 library key type. `KeySet` is an immutable local resolver for rotation overlap.
 `BoundedResolver` constrains a remote `Resolver` by deadline, key-ID length, and
 algorithm allowlist without creating goroutines.
+
+Issuer strings are exact, bounded, nonempty namespaces; there is no wildcard,
+claim-derived selection, or legacy default. `Key.Issuer` and
+`ResolvedKey.Issuer` are trusted key ownership, not copies of a token claim.
+Key IDs remain globally unique within a resolver, even across issuers.
+Missing selection or invalid key ownership fails with `ErrInvalidConfiguration`;
+issuer mismatch fails with `ErrUnauthorized`, without returning a grant.
+Resolver dependency errors retain their existing sanitized classification.
 
 ## Signed URLs
 
@@ -40,8 +49,9 @@ because they own the capability replay model and atomic consumption behavior.
 
 ## HTTP
 
-`adapters/http.Verifier` verifies a request using a static trusted external
-origin and can carry the resulting grant through standard `net/http`
+`adapters/http.Verifier` requires static trusted `VerifierOptions.Issuer`,
+forwards it to core verification, uses a static trusted external origin, and
+can carry the resulting grant through standard `net/http`
 middleware. `adapters/http.SignRequest` is the HTTP-client adapter. Router,
 authentication, authorization, tenancy, correlation, audit, and secret-store
 integrations compose through `http.Handler`, request context,
@@ -53,8 +63,9 @@ framework-specific middleware.
 The released `caphttp` and `memory` packages are deprecated compatibility
 facades. Their exported types retain their original, distinct named-type and
 reflection identities while their operations delegate toward the canonical
-successors without changing context keys, errors, defaults, ownership,
-concurrency, or serialization behavior. The successor package identifiers are
+successors with shared context keys, ownership, concurrency and serialization.
+Both HTTP paths require explicit issuer configuration in the next-major source;
+this intentionally changes their former omitted-issuer behavior. The successor package identifiers are
 `capabilityhttp` and `capabilitymemory`.
 
 All returned payload maps and slices are defensive copies. Caller-owned

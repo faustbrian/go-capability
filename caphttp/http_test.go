@@ -24,7 +24,7 @@ var now = time.Date(2026, 8, 9, 12, 0, 0, 0, time.UTC)
 func TestMiddlewareVerifiesButLeavesAuthorizationVisible(t *testing.T) {
 	profile, signer, resolver := fixture(t)
 	signed := signedURL(t, profile, signer)
-	verifier, err := caphttp.NewVerifier(caphttp.VerifierOptions{
+	verifier, err := caphttp.NewVerifier(caphttp.VerifierOptions{Issuer: "https://issuer.example",
 		Profile: profile, Resolver: resolver, Origin: "https://files.example",
 		Clock: fixedClock{}, Skew: time.Minute, Limits: capability.DefaultLimits(),
 	})
@@ -36,7 +36,7 @@ func TestMiddlewareVerifiesButLeavesAuthorizationVisible(t *testing.T) {
 		if !found {
 			t.Fatal("GrantFromContext() found = false")
 		}
-		if err := grant.Authorize(capability.Use{
+		if err := grant.Authorize(capability.Use{Issuer: "https://issuer.example",
 			Audience: "download", Resource: "https://files.example/report/42?download=1",
 			Operation: "GET",
 		}); err != nil {
@@ -70,7 +70,7 @@ func TestMiddlewareComposesWithExplicitApplicationOrdering(t *testing.T) {
 	type contextKey string
 	const authenticated contextKey = "authenticated"
 	var order []string
-	verifier, err := caphttp.NewVerifier(caphttp.VerifierOptions{
+	verifier, err := caphttp.NewVerifier(caphttp.VerifierOptions{Issuer: "https://issuer.example",
 		Profile: profile, Resolver: resolver, Origin: "https://files.example",
 		Clock: fixedClock{}, Limits: capability.DefaultLimits(),
 		BodyDigest: func(request *http.Request) ([]byte, error) {
@@ -97,7 +97,7 @@ func TestMiddlewareComposesWithExplicitApplicationOrdering(t *testing.T) {
 		if !found {
 			t.Fatal("GrantFromContext() found = false")
 		}
-		if err := grant.Authorize(capability.Use{
+		if err := grant.Authorize(capability.Use{Issuer: "https://issuer.example",
 			Audience: "download", Resource: "https://files.example/report/42?download=1", Operation: http.MethodPost,
 			Tenant: "tenant-a",
 		}); err != nil {
@@ -132,7 +132,7 @@ func TestMiddlewareComposesWithExplicitApplicationOrdering(t *testing.T) {
 
 func TestMiddlewareRejectsBeforeCallingApplicationAndRedactsFailure(t *testing.T) {
 	profile, _, resolver := fixture(t)
-	verifier, _ := caphttp.NewVerifier(caphttp.VerifierOptions{
+	verifier, _ := caphttp.NewVerifier(caphttp.VerifierOptions{Issuer: "https://issuer.example",
 		Profile: profile, Resolver: resolver, Origin: "https://files.example",
 		Clock: fixedClock{}, Limits: capability.DefaultLimits(),
 	})
@@ -168,9 +168,9 @@ func TestSignRequestUsesExplicitClientMutationOnlyAfterSuccess(t *testing.T) {
 func TestVerifierConfigurationRequiresTrustedOriginAndClock(t *testing.T) {
 	profile, _, resolver := fixture(t)
 	for name, options := range map[string]caphttp.VerifierOptions{
-		"clock":    {Profile: profile, Resolver: resolver, Origin: "https://files.example", Limits: capability.DefaultLimits()},
-		"origin":   {Profile: profile, Resolver: resolver, Clock: fixedClock{}, Limits: capability.DefaultLimits()},
-		"resolver": {Profile: profile, Origin: "https://files.example", Clock: fixedClock{}, Limits: capability.DefaultLimits()},
+		"clock":    {Issuer: "https://issuer.example", Profile: profile, Resolver: resolver, Origin: "https://files.example", Limits: capability.DefaultLimits()},
+		"origin":   {Issuer: "https://issuer.example", Profile: profile, Resolver: resolver, Clock: fixedClock{}, Limits: capability.DefaultLimits()},
+		"resolver": {Issuer: "https://issuer.example", Profile: profile, Origin: "https://files.example", Clock: fixedClock{}, Limits: capability.DefaultLimits()},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := caphttp.NewVerifier(options); err == nil {
@@ -191,7 +191,7 @@ func TestVerifierBodyDigestCustomFailureAndBoundaryHelpers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SignURL() error = %v", err)
 	}
-	verifier, err := caphttp.NewVerifier(caphttp.VerifierOptions{
+	verifier, err := caphttp.NewVerifier(caphttp.VerifierOptions{Issuer: "https://issuer.example",
 		Profile: profile, Resolver: resolver, Origin: "https://files.example", Clock: fixedClock{},
 		Limits: capability.DefaultLimits(), BodyDigest: func(*http.Request) ([]byte, error) { return digest[:], nil },
 	})
@@ -203,7 +203,7 @@ func TestVerifierBodyDigestCustomFailureAndBoundaryHelpers(t *testing.T) {
 		t.Fatalf("VerifyRequest() error = %v", err)
 	}
 	bodyErr := errors.New("body unavailable")
-	verifier, _ = caphttp.NewVerifier(caphttp.VerifierOptions{
+	verifier, _ = caphttp.NewVerifier(caphttp.VerifierOptions{Issuer: "https://issuer.example",
 		Profile: profile, Resolver: resolver, Origin: "https://files.example", Clock: fixedClock{},
 		Limits: capability.DefaultLimits(), BodyDigest: func(*http.Request) ([]byte, error) { return nil, bodyErr },
 	})
@@ -217,7 +217,7 @@ func TestVerifierBodyDigestCustomFailureAndBoundaryHelpers(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			privateCause := fmt.Errorf("private body diagnostic: %w", classification)
-			classified, classifiedErr := caphttp.NewVerifier(caphttp.VerifierOptions{
+			classified, classifiedErr := caphttp.NewVerifier(caphttp.VerifierOptions{Issuer: "https://issuer.example",
 				Profile: profile, Resolver: resolver, Origin: "https://files.example", Clock: fixedClock{},
 				Limits: capability.DefaultLimits(), BodyDigest: func(*http.Request) ([]byte, error) { return nil, privateCause },
 			})
@@ -246,7 +246,7 @@ func TestVerifierBodyDigestCustomFailureAndBoundaryHelpers(t *testing.T) {
 func TestMiddlewareCustomErrorNilHandlerAndSigningValidation(t *testing.T) {
 	profile, signer, resolver := fixture(t)
 	customCalled := false
-	verifier, err := caphttp.NewVerifier(caphttp.VerifierOptions{
+	verifier, err := caphttp.NewVerifier(caphttp.VerifierOptions{Issuer: "https://issuer.example",
 		Profile: profile, Resolver: resolver, Origin: "https://files.example", Clock: fixedClock{},
 		Limits: capability.DefaultLimits(), ErrorHandler: func(writer http.ResponseWriter, _ *http.Request, err error) {
 			customCalled = err != nil
@@ -275,7 +275,7 @@ func TestMiddlewareCustomErrorNilHandlerAndSigningValidation(t *testing.T) {
 
 func TestVerifierRejectsInvalidProfilesOriginsSkewAndDigestPairing(t *testing.T) {
 	profile, _, resolver := fixture(t)
-	valid := caphttp.VerifierOptions{
+	valid := caphttp.VerifierOptions{Issuer: "https://issuer.example",
 		Profile: profile, Resolver: resolver, Origin: "https://files.example", Clock: fixedClock{}, Limits: capability.DefaultLimits(),
 	}
 	tests := map[string]func(*caphttp.VerifierOptions){
@@ -331,7 +331,7 @@ func fixture(t *testing.T) (capability.URLProfile, capability.Signer, capability
 		QueryParameters: []string{"download"},
 	}
 	resolver := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: verifier}, nil
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier}, nil
 	})
 	return profile, signer, resolver
 }

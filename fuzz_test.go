@@ -48,7 +48,7 @@ func FuzzSignedURLRoundTripIsDeterministic(f *testing.F) {
 	signer, _ := capability.NewHMACSHA256Signer("fuzz-key", key)
 	verifier, _ := capability.NewHMACSHA256Verifier(key)
 	resolver := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: verifier}, nil
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier}, nil
 	})
 	profile := capability.URLProfile{
 		Name: "fuzz-v1", SignatureParameter: "cap", AllowRelative: true,
@@ -70,7 +70,7 @@ func FuzzSignedURLRoundTripIsDeterministic(f *testing.F) {
 		}
 		grant, err := capability.VerifyURL(context.Background(), capability.URLRequest{
 			Method: "GET", RawURL: signed,
-		}, profile, resolver, capability.VerifyOptions{
+		}, profile, resolver, capability.VerifyOptions{Issuer: "https://issuer.example",
 			Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits(),
 		})
 		if err != nil {

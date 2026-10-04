@@ -23,8 +23,9 @@ designed to reject payload tampering, capability widening, algorithm downgrade,
 parser differentials, URL parameter smuggling, authority substitution, and
 traversal ambiguity at this package's boundary. Bounded replay also requires
 explicit consumption through a suitable store with a correctly isolated
-capability-ID namespace. Verification alone does not establish issuer policy,
-consume a use, or protect a business side effect. The format does not hide
+capability-ID namespace. Verification requires an independently selected issuer
+and matching trusted key ownership; attempted use separately requires its exact
+issuer. Verification alone does not consume a use or protect a business side effect. The format does not hide
 payload contents, authenticate a human, decide business policy, guarantee global
 revocation consistency, or prove who signed a token in a legal sense.
 

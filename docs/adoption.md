@@ -17,13 +17,40 @@
 
 ## Migration
 
+### Explicit issuer policy (next major)
+
+Current main intentionally rejects the formerly valid omitted-issuer verification
+and authorization behavior. This requires a new major release and consumer
+adoption; it is not a compatible patch or a claim that such a release exists.
+Select `VerifyOptions.Issuer` and either HTTP path's `VerifierOptions.Issuer`
+from trusted application configuration, not the token or request. Configure
+each `Key.Issuer` or custom resolver's `ResolvedKey.Issuer` as the key's actual
+owner. Supply `Use.Issuer` from the application's intended operation namespace.
+All three namespaces must match the authenticated payload exactly. Missing
+fields fail closed; do not restore acceptance with a wildcard or legacy default.
+Globally unique key IDs, `Resolver.Resolve`'s signature, and the v1 token wire
+remain unchanged. Unkeyed exported struct literals must also be migrated.
+
+The identity-platform's older additive-only promise for existing verification
+and grant behavior is superseded for this security change, not satisfied by it.
+Its pinned contracts and consumers require deliberate next-major adoption before
+identity-platform or ecosystem completion can be claimed. Existing published-v1
+consumers remain on their selected v1 behavior until explicitly migrated.
+
+This stage does not change `Consumption` or any replay-store schema or key.
+Issuer-scoped replay identity and safe migration of live counters remain open;
+continue isolating stores or ensuring globally unique capability IDs. A future
+store migration must address old/new verifier coexistence and existing quotas,
+not silently reset use allowances.
+
 ### Adapter package paths
 
 New code should import `github.com/faustbrian/go-capability/adapters/http` and
 `github.com/faustbrian/go-capability/adapters/memory`. Existing imports of
 `github.com/faustbrian/go-capability/caphttp` and
 `github.com/faustbrian/go-capability/memory` remain source- and
-behavior-compatible facades. Migration updates the import paths and default
+behavior-compatible facades within the published v1 interval. The next-major
+issuer requirement applies equally to both HTTP paths. Migration updates the import paths and default
 qualifiers to `capabilityhttp` and `capabilitymemory`; callers may temporarily
 alias the new imports to their old qualifiers when an import-path-only change
 is preferable. Do not move `postgres` or `valkey`; those packages remain
@@ -62,7 +89,7 @@ No. Header and payload are base64url encoded, not encrypted.
 ### Can a verified grant replace application authorization?
 
 No. Verification authenticates encoded authority. The application must compare
-the attempted audience, subject, resource, operation, tenant, and caveats.
+the attempted issuer, audience, subject, resource, operation, tenant, and caveats.
 
 ### Can middleware consume one-time capabilities automatically?
 

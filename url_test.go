@@ -38,10 +38,10 @@ func TestSignAndVerifyAbsoluteURLCoversEveryProfileComponent(t *testing.T) {
 		t.Fatalf("SignURL() = %s", signed)
 	}
 	resolver := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: verifier}, nil
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier}, nil
 	})
 	request.RawURL = signed
-	grant, err := capability.VerifyURL(context.Background(), request, profile, resolver, capability.VerifyOptions{
+	grant, err := capability.VerifyURL(context.Background(), request, profile, resolver, capability.VerifyOptions{Issuer: "https://issuer.example",
 		Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits(),
 	})
 	if err != nil {
@@ -53,19 +53,19 @@ func TestSignAndVerifyAbsoluteURLCoversEveryProfileComponent(t *testing.T) {
 
 	tampered := request
 	tampered.Method = "POST"
-	if _, err := capability.VerifyURL(context.Background(), tampered, profile, resolver, capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}); !errors.Is(err, capability.ErrURLBinding) {
+	if _, err := capability.VerifyURL(context.Background(), tampered, profile, resolver, capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}); !errors.Is(err, capability.ErrURLBinding) {
 		t.Fatalf("VerifyURL(method tamper) error = %v", err)
 	}
 	tampered = request
 	tampered.BodyDigest = sha256.New().Sum(nil)
-	if _, err := capability.VerifyURL(context.Background(), tampered, profile, resolver, capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}); !errors.Is(err, capability.ErrURLBinding) {
+	if _, err := capability.VerifyURL(context.Background(), tampered, profile, resolver, capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}); !errors.Is(err, capability.ErrURLBinding) {
 		t.Fatalf("VerifyURL(body tamper) error = %v", err)
 	}
 }
 
 func TestVerifyURLRejectsAmbiguitySmugglingAndDowngrade(t *testing.T) {
 	signed, profile, resolver := signedURLFixture(t)
-	options := capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
+	options := capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
 	tests := map[string]string{
 		"duplicate signature":    signed + "&cap=second",
 		"duplicate query":        strings.Replace(signed, "download=1", "download=1&download=2", 1),
@@ -105,10 +105,10 @@ func TestRelativeURLRequiresExplicitProfileAndPreservesRelativeForm(t *testing.T
 		t.Fatalf("SignURL() = %s", signed)
 	}
 	resolver := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: verifier}, nil
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier}, nil
 	})
 	request.RawURL = signed
-	if _, err := capability.VerifyURL(context.Background(), request, profile, resolver, capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}); err != nil {
+	if _, err := capability.VerifyURL(context.Background(), request, profile, resolver, capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}); err != nil {
 		t.Fatalf("VerifyURL() error = %v", err)
 	}
 	profile.AllowRelative = false
@@ -189,14 +189,14 @@ func signedURLFixture(t *testing.T) (string, capability.URLProfile, capability.R
 		t.Fatalf("SignURL() error = %v", err)
 	}
 	resolver := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: verifier}, nil
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier}, nil
 	})
 	return signed, profile, resolver
 }
 
 func TestSignedURLExpirationRemainsCapabilityExpiration(t *testing.T) {
 	signed, profile, resolver := signedURLFixture(t)
-	_, err := capability.VerifyURL(context.Background(), capability.URLRequest{Method: "GET", RawURL: signed}, profile, resolver, capability.VerifyOptions{
+	_, err := capability.VerifyURL(context.Background(), capability.URLRequest{Method: "GET", RawURL: signed}, profile, resolver, capability.VerifyOptions{Issuer: "https://issuer.example",
 		Now: testNow.Add(10 * time.Minute), Skew: 0, Limits: capability.DefaultLimits(),
 	})
 	if !errors.Is(err, capability.ErrExpired) {

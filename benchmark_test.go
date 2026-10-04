@@ -24,9 +24,9 @@ func BenchmarkIssueHMACSHA256(b *testing.B) {
 func BenchmarkVerifyHMACSHA256(b *testing.B) {
 	token, verifier := hmacFixture(b)
 	resolver := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: verifier}, nil
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier}, nil
 	})
-	options := capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
+	options := capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
 	b.ReportAllocs()
 	for b.Loop() {
 		_, _ = capability.Verify(context.Background(), token, resolver, options)
@@ -61,9 +61,9 @@ func BenchmarkVerifyURLHMACSHA256(b *testing.B) {
 		Method: http.MethodGet, RawURL: "https://files.example/report/42?download=1",
 	}, profile, signer, capability.DefaultLimits())
 	resolver := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: verifier}, nil
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier}, nil
 	})
-	options := capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
+	options := capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
 	b.ReportAllocs()
 	for b.Loop() {
 		_, _ = capability.VerifyURL(context.Background(), capability.URLRequest{
