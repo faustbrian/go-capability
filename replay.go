@@ -36,6 +36,8 @@ func (function ConsumptionStoreFunc) Consume(ctx context.Context, consumption Co
 }
 
 // Consume atomically records one bounded use. Reusable grants do not require a store.
+// Store errors retain only replay-policy and safe context classifications, not
+// the store's diagnostic text or arbitrary causes.
 func (grant Grant) Consume(ctx context.Context, store ConsumptionStore) (ConsumptionResult, error) {
 	if err := contextError(ctx); err != nil {
 		return ConsumptionResult{}, err
@@ -54,8 +56,15 @@ func (grant Grant) Consume(ctx context.Context, store ConsumptionStore) (Consump
 	if err == nil {
 		return result, nil
 	}
-	if errors.Is(err, ErrReplayExhausted) || errors.Is(err, ErrReplayConflict) {
-		return ConsumptionResult{}, err
+	exhausted := errors.Is(err, ErrReplayExhausted)
+	conflict := errors.Is(err, ErrReplayConflict)
+	switch {
+	case exhausted && conflict:
+		return ConsumptionResult{}, redact(errors.Join(ErrReplayExhausted, ErrReplayConflict), err)
+	case exhausted:
+		return ConsumptionResult{}, redact(ErrReplayExhausted, err)
+	case conflict:
+		return ConsumptionResult{}, redact(ErrReplayConflict, err)
 	}
 	return ConsumptionResult{}, redact(ErrConsumptionUnknown, err)
 }
