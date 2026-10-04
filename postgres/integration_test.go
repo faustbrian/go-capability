@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-capability"
-	capabilitypostgres "github.com/faustbrian/go-capability/postgres"
+	"github.com/faustbrian/go-capability/v2"
+	capabilitypostgres "github.com/faustbrian/go-capability/v2/postgres"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 

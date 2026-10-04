@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-capability"
-	"github.com/faustbrian/go-capability/adapters/http"
-	legacy "github.com/faustbrian/go-capability/caphttp"
+	"github.com/faustbrian/go-capability/v2"
+	"github.com/faustbrian/go-capability/v2/adapters/http"
+	legacy "github.com/faustbrian/go-capability/v2/caphttp"
 )
 
 func TestBothHTTPPathsRequireAndForwardTrustedIssuer(t *testing.T) {
@@ -131,19 +131,19 @@ func TestSuccessorPreservesHTTPCompatibility(t *testing.T) {
 	if reflect.TypeOf(compatibilityOptions) == reflect.TypeOf(options) {
 		t.Fatal("successor and compatibility option identities are not distinct")
 	}
-	if got := reflect.TypeOf(options).PkgPath(); got != "github.com/faustbrian/go-capability/adapters/http" {
+	if got := reflect.TypeOf(options).PkgPath(); got != "github.com/faustbrian/go-capability/v2/adapters/http" {
 		t.Fatalf("VerifierOptions package identity = %q", got)
 	}
-	if got := reflect.TypeOf(compatibilityOptions).PkgPath(); got != "github.com/faustbrian/go-capability/caphttp" {
+	if got := reflect.TypeOf(compatibilityOptions).PkgPath(); got != "github.com/faustbrian/go-capability/v2/caphttp" {
 		t.Fatalf("compatibility VerifierOptions package identity = %q", got)
 	}
 	if reflect.TypeOf(compatibilityVerifier) == reflect.TypeOf(handler) {
 		t.Fatal("successor and compatibility verifier identities are not distinct")
 	}
-	if got := reflect.TypeOf(handler).Elem().PkgPath(); got != "github.com/faustbrian/go-capability/adapters/http" {
+	if got := reflect.TypeOf(handler).Elem().PkgPath(); got != "github.com/faustbrian/go-capability/v2/adapters/http" {
 		t.Fatalf("Verifier package identity = %q", got)
 	}
-	if got := reflect.TypeOf(compatibilityVerifier).Elem().PkgPath(); got != "github.com/faustbrian/go-capability/caphttp" {
+	if got := reflect.TypeOf(compatibilityVerifier).Elem().PkgPath(); got != "github.com/faustbrian/go-capability/v2/caphttp" {
 		t.Fatalf("compatibility Verifier package identity = %q", got)
 	}
 }

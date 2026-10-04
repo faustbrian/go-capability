@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/faustbrian/go-capability"
-	capabilitymemory "github.com/faustbrian/go-capability/adapters/memory"
+	"github.com/faustbrian/go-capability/v2"
+	capabilitymemory "github.com/faustbrian/go-capability/v2/adapters/memory"
 )
 
 // Revocations preserves the released compatibility-path type identity while

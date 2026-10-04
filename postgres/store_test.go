@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-capability"
+	"github.com/faustbrian/go-capability/v2"
 )
 
 var driverSequence atomic.Int64

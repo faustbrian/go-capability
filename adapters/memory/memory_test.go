@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-capability"
-	"github.com/faustbrian/go-capability/adapters/memory"
-	legacy "github.com/faustbrian/go-capability/memory"
+	"github.com/faustbrian/go-capability/v2"
+	"github.com/faustbrian/go-capability/v2/adapters/memory"
+	legacy "github.com/faustbrian/go-capability/v2/memory"
 )
 
 func TestSuccessorPreservesMemoryCompatibility(t *testing.T) {
@@ -40,10 +40,10 @@ func TestSuccessorPreservesMemoryCompatibility(t *testing.T) {
 	if reflect.TypeOf(compatibilityStore) == reflect.TypeOf(store) {
 		t.Fatal("successor and compatibility store identities are not distinct")
 	}
-	if got := reflect.TypeOf(store).Elem().PkgPath(); got != "github.com/faustbrian/go-capability/adapters/memory" {
+	if got := reflect.TypeOf(store).Elem().PkgPath(); got != "github.com/faustbrian/go-capability/v2/adapters/memory" {
 		t.Fatalf("ConsumptionStore package identity = %q", got)
 	}
-	if got := reflect.TypeOf(compatibilityStore).Elem().PkgPath(); got != "github.com/faustbrian/go-capability/memory" {
+	if got := reflect.TypeOf(compatibilityStore).Elem().PkgPath(); got != "github.com/faustbrian/go-capability/v2/memory" {
 		t.Fatalf("compatibility ConsumptionStore package identity = %q", got)
 	}
 
@@ -66,10 +66,10 @@ func TestSuccessorPreservesMemoryCompatibility(t *testing.T) {
 	if reflect.TypeOf(compatibilityRevocations) == reflect.TypeOf(revocations) {
 		t.Fatal("successor and compatibility revocation identities are not distinct")
 	}
-	if got := reflect.TypeOf(revocations).Elem().PkgPath(); got != "github.com/faustbrian/go-capability/adapters/memory" {
+	if got := reflect.TypeOf(revocations).Elem().PkgPath(); got != "github.com/faustbrian/go-capability/v2/adapters/memory" {
 		t.Fatalf("Revocations package identity = %q", got)
 	}
-	if got := reflect.TypeOf(compatibilityRevocations).Elem().PkgPath(); got != "github.com/faustbrian/go-capability/memory" {
+	if got := reflect.TypeOf(compatibilityRevocations).Elem().PkgPath(); got != "github.com/faustbrian/go-capability/v2/memory" {
 		t.Fatalf("compatibility Revocations package identity = %q", got)
 	}
 }

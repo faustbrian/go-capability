@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/faustbrian/go-capability"
-	"github.com/faustbrian/go-capability/adapters/http"
+	"github.com/faustbrian/go-capability/v2"
+	"github.com/faustbrian/go-capability/v2/adapters/http"
 )
 
 func ExampleSignRequest() {

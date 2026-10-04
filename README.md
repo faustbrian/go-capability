@@ -20,11 +20,12 @@ a JWT or PASETO replacement, payload encryption, DRM, or legal
 non-repudiation. Applications remain responsible for authenticating callers
 and authorizing each attempted use of a verified grant.
 
-Current main and the examples below require explicit issuer configuration as a
-breaking change for the next major; they do not describe the published v1 API.
+Current main declares `github.com/faustbrian/go-capability/v2`; the examples
+below describe this unreleased v2 source and its explicit issuer configuration,
+issuer-scoped replay and finite memory admission, not the published v1 API.
 The v1 install command below selects the existing published API, whose issuer
-option fields differ from these unreleased examples. No next-major tag or
-import path is claimed here. See the
+option fields differ from these examples. This source migration does not
+publish or claim a resolvable v2 tag. See the
 [major adoption guidance](docs/adoption.md#explicit-issuer-policy-next-major).
 
 ## Install (published v1)
@@ -35,13 +36,15 @@ go get github.com/faustbrian/go-capability@v1
 
 The core module has no non-standard-library runtime dependencies.
 
-Use `github.com/faustbrian/go-capability/adapters/http` for `net/http`
-integration and `github.com/faustbrian/go-capability/adapters/memory` for
-process-local replay and revocation state. The released `caphttp` and `memory`
-paths remain compatibility facades during the documented migration interval.
+In the v2 source, use `github.com/faustbrian/go-capability/v2/adapters/http` for
+`net/http` integration and `github.com/faustbrian/go-capability/v2/adapters/memory`
+for process-local replay and revocation state. The `v2/caphttp` and `v2/memory`
+facades remain alongside the canonical adapters; existing published v1 paths
+remain subject to their documented compatibility interval.
 
-Run `make clean-consumer` to compile the complete public surface from a fresh
-external module with no repository workspace assistance.
+Run `make clean-consumer` for an isolated external-module rehearsal of owned
+v2 source. Its temporary local replacement is not public release resolution
+or published-consumer proof; publication needs a separate no-replacement check.
 `make interoperability` reproduces the HMAC golden token with Python's
 independent standard-library implementation.
 

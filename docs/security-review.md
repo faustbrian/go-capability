@@ -2,25 +2,29 @@
 
 ## Model revision and source scope
 
-Repository threat model revision **5**, dated **2026-10-04**, covers
-`github.com/faustbrian/go-capability` at baseline commit
-`59e1734a605d8fadcc6715e216122d5e185eb3c9` plus the finite memory admission correction
+Repository threat model revision **6**, dated **2026-10-04**, covers
+`github.com/faustbrian/go-capability/v2` at baseline commit
+`0c2cf6e1b58d786b963228a26b060fc655d7bebc` plus the v2 import binding
 identified by these immutable runtime Git blobs:
 
 | Source | Git blob |
 | --- | --- |
-| `replay.go` | `7d237e85fcb5c246b6ff40b23750e259a5c32d89` |
-| `errors.go` | `4a63cac3e70d50b9bbb6f3dd848152f04b03f3dc` |
-| `adapters/memory/consumption.go` | `3518579fbc8c25e0e54d765451a7c4a2ac6afb41` |
-| `adapters/memory/revocation.go` | `cfbae4bddcdb3fcdd64496e5254fc688fc06f1fc` |
-| `adapters/memory/limits.go` | `6dcd36427c555c33734236cfc18f6448554bcd9f` |
-| `memory/consumption.go` | `b03eb95c711dc5257c14afe072b2c267a2e08c19` |
-| `memory/revocation.go` | `d2ac7c00793ace8bddb92fe13a09fb9cb54d5125` |
-| `memory/limits.go` | `87e9e564ea0d423875103822e419940a57d970eb` |
+| `adapters/http/http.go` | `2582b2a9b548002ac8032b063f89098726fd80cf` |
+| `adapters/memory/consumption.go` | `7480486459eb9e046024504d6277e8f4877bf167` |
+| `adapters/memory/revocation.go` | `5fcbff0214091fe343b4445d9c82cded9fd7ba04` |
+| `caphttp/http.go` | `a021388bdede3ecc99ba108a6ee3c83b1ae7daea` |
+| `memory/consumption.go` | `3240b67deefcb5c7803c6b67e17f82964106bf92` |
+| `memory/revocation.go` | `0ad1d31def791a06e37a5ec4304cf4040205000c` |
+| `memory/limits.go` | `734fe30dfc7f0915e9dd1c15d62f6f39900eb250` |
+| `postgres/migration.go` | `f23ec641ec612cc1a50d68d115a377c3dbbbf68e` |
+| `postgres/store.go` | `f1a21f59c071772d08b84fec9c736d37d7423aae` |
+| `valkey/store.go` | `a37890f7b292c9df5c3eb994ed63b8ca6018ccd9` |
 
 All other runtime source is unchanged from that baseline, which includes the
-revision 2 policy-error, revision 3 strict issuer, and revision 4 replay identity
-corrections. Revision 4 covered baseline
+revision 2 policy-error, revision 3 strict issuer, revision 4 replay identity,
+and revision 5 finite admission corrections. Revision 5 covered baseline
+`59e1734a605d8fadcc6715e216122d5e185eb3c9` and the finite admission correction
+integrated into this baseline. Revision 4 covered baseline
 `402a122e5cc11c281961b50f5dffe0323a2e598b` and the replay correction integrated
 into this baseline. These are inspected immutable
 source identities, not a prospective documentation commit, release, or
@@ -30,6 +34,9 @@ deployment identity. Revision 1 covered the unchanged runtime at
 The published `v1.1.1` tag identifies
 `3fc043661119b72a4c5887b6bff9feab402ac910`, not this main-source baseline.
 This model does not certify that release or any integrating application.
+V2 source rebinding changes Go module/type identity, not token-wire v1 or runtime
+algorithms. The retained facades and their compatibility interval remain;
+source adoption is not publication or migration of an external consumer.
 Revisit the model when runtime source, dependencies, protocol policy, adapters,
 or the accepted deployment assumptions change. Model revisions are distinct
 from module versions and do not require a module release by themselves.
@@ -366,3 +373,15 @@ and real `Grant.Consume` and `Verify` outcomes. Safe capacity classifications
 discard arbitrary adapter diagnostics/causes; custom adapters remain trusted
 to assert no committed use. This is not service, stress, race, scanner,
 production memory sizing, or published-consumer qualification.
+
+Revision 6 rebinds the seven public package imports and actual exported API
+baseline to the root `/v2` module. Unchanged runtime evidence remains applicable
+to its unchanged algorithms. The owned-source external-module rehearsal uses
+a temporary local replacement and tiny ordinarily issued values with explicit
+issuer/authorization/consumption; it is not a no-replacement public consumer,
+published release or external application adoption result.
+Its ordinary signed-URL HTTP case explicitly calls application-owned
+`Authorize` then `Consume` before incrementing a business-call count; the second
+same valid grant is refused before another increment. This named local
+composition is separate from the earlier authorization-only HTTP test and
+does not establish Service's handler behavior or adoption.
