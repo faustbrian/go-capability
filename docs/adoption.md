@@ -90,6 +90,23 @@ Align application clocks, skew and consumption windows.
 These are source contracts and required deployment steps, not evidence that a
 database, ledger, consumer or public major release has been migrated.
 
+### Finite memory admission (next major)
+
+The simple memory constructors keep their signatures but now impose finite
+defaults: 10,000 records and 4 MiB of retained key-string bytes per store.
+Use `StoreLimits` with `NewConsumptionStoreWithLimits` or
+`NewRevocationsWithLimits` for other explicit positive budgets on either memory
+path. All five revocation maps share one allowance and never evict.
+Plan for `ErrCapacity`: replay refuses without consuming, while trusted
+administrative writers must handle a failed insertion rather than assuming
+revocation succeeded. A failed write does not permanently disable unrelated
+queries. Configure query-string budgets for the full authenticated query;
+oversized ordinary queries fail verification closed as `ErrRevocationUnknown`.
+Own cleanup cutoffs, overload policy and revocation-store lifecycle; do not
+replace a live ledger or discard revocations to regain admission. These finite
+record/string budgets are not a byte-exact total heap limit. See
+[admission accounting](replay-and-revocation.md#finite-process-local-admission).
+
 ### Adapter package paths
 
 New code should import `github.com/faustbrian/go-capability/adapters/http` and

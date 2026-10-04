@@ -9,14 +9,24 @@ import (
 )
 
 // Revocations preserves the released compatibility-path type identity while
-// delegating all behavior to the canonical adapter.
+// delegating to the canonical finite adapter. Administrative writers must
+// handle ErrCapacity: a failed insertion does not revoke authority.
 type Revocations struct {
 	canonical *capabilitymemory.Revocations
 }
 
-// NewRevocations constructs an empty process-local revocation set.
+// NewRevocations constructs an empty set with DefaultStoreLimits.
 func NewRevocations() *Revocations {
 	return &Revocations{canonical: capabilitymemory.NewRevocations()}
+}
+
+// NewRevocationsWithLimits constructs a set with explicit positive budgets.
+func NewRevocationsWithLimits(limits StoreLimits) (*Revocations, error) {
+	store, err := capabilitymemory.NewRevocationsWithLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	return &Revocations{canonical: store}, nil
 }
 
 // RevokeCapability revokes one capability ID within an issuer namespace.

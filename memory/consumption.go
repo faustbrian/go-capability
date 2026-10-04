@@ -24,21 +24,29 @@ type ConsumptionStore struct {
 	canonical *capabilitymemory.ConsumptionStore
 }
 
-// NewConsumptionStore constructs an empty process-local store.
+// NewConsumptionStore constructs an empty store with DefaultStoreLimits.
 func NewConsumptionStore(clock Clock) (*ConsumptionStore, error) {
-	store, err := capabilitymemory.NewConsumptionStore(clock)
+	return NewConsumptionStoreWithLimits(clock, DefaultStoreLimits())
+}
+
+// NewConsumptionStoreWithLimits constructs a store with explicit positive budgets.
+func NewConsumptionStoreWithLimits(clock Clock, limits StoreLimits) (*ConsumptionStore, error) {
+	store, err := capabilitymemory.NewConsumptionStoreWithLimits(clock, limits)
 	if err != nil {
 		return nil, err
 	}
 	return &ConsumptionStore{canonical: store}, nil
 }
 
-// Consume atomically records one use or returns ErrReplayExhausted without incrementing.
+// Consume records a use through the canonical finite store. ErrCapacity is a
+// known no-consume refusal; repeats do not charge additional admission.
 func (store *ConsumptionStore) Consume(ctx context.Context, request capability.Consumption) (capability.ConsumptionResult, error) {
 	return store.canonical.Consume(ctx, request)
 }
 
-// Cleanup removes state expiring at or before cutoff and returns the number removed.
+// Cleanup releases removed count and string-byte admission. The trusted caller
+// must choose a cutoff beyond all relevant acceptance windows to avoid resetting
+// live allowance; no background cleanup runs.
 func (store *ConsumptionStore) Cleanup(ctx context.Context, cutoff time.Time) (int, error) {
 	return store.canonical.Cleanup(ctx, cutoff)
 }

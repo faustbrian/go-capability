@@ -24,7 +24,10 @@ type ConsumptionResult struct {
 }
 
 // ConsumptionStore atomically increments a capability only when its committed
-// use count remains below MaxUses. Any non-policy error may represent an
+// use count remains below MaxUses. ErrCapacity, like ErrReplayExhausted and
+// ErrReplayConflict, asserts that no use was committed. Custom adapters are
+// trusted to return those classifications only for known no-consume outcomes.
+// Any non-policy error may represent an
 // unknown commit outcome and callers must fail closed rather than retry blindly.
 type ConsumptionStore interface {
 	Consume(context.Context, Consumption) (ConsumptionResult, error)
@@ -39,7 +42,7 @@ func (function ConsumptionStoreFunc) Consume(ctx context.Context, consumption Co
 }
 
 // Consume atomically records one bounded use. Reusable grants do not require a store.
-// Store errors retain only replay-policy and safe context classifications, not
+// Store errors retain only replay-policy, capacity, and safe context classifications, not
 // the store's diagnostic text or arbitrary causes.
 func (grant Grant) Consume(ctx context.Context, store ConsumptionStore) (ConsumptionResult, error) {
 	if err := contextError(ctx); err != nil {
@@ -63,15 +66,17 @@ func (grant Grant) Consume(ctx context.Context, store ConsumptionStore) (Consump
 	if err == nil {
 		return result, nil
 	}
-	exhausted := errors.Is(err, ErrReplayExhausted)
-	conflict := errors.Is(err, ErrReplayConflict)
-	switch {
-	case exhausted && conflict:
-		return ConsumptionResult{}, redact(errors.Join(ErrReplayExhausted, ErrReplayConflict), err)
-	case exhausted:
-		return ConsumptionResult{}, redact(ErrReplayExhausted, err)
-	case conflict:
-		return ConsumptionResult{}, redact(ErrReplayConflict, err)
+	var policies []error
+	for _, policy := range []error{ErrReplayExhausted, ErrReplayConflict, ErrCapacity} {
+		if errors.Is(err, policy) {
+			policies = append(policies, policy)
+		}
+	}
+	if len(policies) == 1 {
+		return ConsumptionResult{}, redact(policies[0], err)
+	}
+	if len(policies) > 1 {
+		return ConsumptionResult{}, redact(errors.Join(policies...), err)
 	}
 	return ConsumptionResult{}, redact(ErrConsumptionUnknown, err)
 }

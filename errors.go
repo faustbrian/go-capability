@@ -6,6 +6,9 @@ import (
 )
 
 var (
+	// ErrCapacity reports refusal before state insertion or consumption. Trusted
+	// adapters must only return this classification when no use was committed.
+	ErrCapacity = errors.New("capability: state capacity reached")
 	// ErrInvalidConfiguration reports an unsafe or incomplete caller policy.
 	ErrInvalidConfiguration = errors.New("capability: invalid configuration")
 	// ErrInvalidPayload reports a malformed or semantically invalid payload.
