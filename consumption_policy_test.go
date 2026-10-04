@@ -9,7 +9,8 @@ import (
 
 	"github.com/faustbrian/go-capability"
 	capmemory "github.com/faustbrian/go-capability/adapters/memory"
-	compatmemory "github.com/faustbrian/go-capability/memory"
+	//lint:ignore SA1019 The supported compatibility facade must retain Grant.Consume accounting coverage.
+	compatmemory "github.com/faustbrian/go-capability/memory" //nolint:staticcheck // Intentional coverage of the still-supported compatibility facade.
 )
 
 func TestGrantConsumptionSanitizesPolicyErrors(t *testing.T) {
