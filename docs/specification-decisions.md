@@ -255,7 +255,7 @@ Exact bindings: Every authority-bearing transport dimension must be explicitly t
 | Selected behavior | `MaxUses == 0` is reusable for an authenticated grant. Positive values require an explicit `ConsumptionStore` that atomically binds exact issuer/capability-ID identity, expiry, and maximum uses. Missing issuer fails closed. Terminal exhaustion and identity conflicts are distinct; every unclassified store failure is `ErrConsumptionUnknown`. PostgreSQL rejects expired requests against its transaction clock before state writes, without resetting a retained or absent identical grant's quota; future-expiry renewal after row expiry remains supported. The caller owns ordering, idempotency, and reconciliation with the protected side effect. |
 | Security and resource consequences | Atomic consumption prevents concurrent overuse when the selected store is shared by all replicas. Counts are bounded per tuple; memory aggregate admission remains an open boundary. Unknown outcomes fail closed without claiming that no mutation occurred. |
 | Compatibility and wire consequences | Issuer-scoped consumption and explicit durable migration are next-major contracts; token wire is unchanged. Existing ID-only ledgers require proven single-owner backfill or exact legacy-owner mapping and fencing every old writer; unknown ownership requires retirement, not live quota reset. Use count is signed and cannot be changed by storage policy. Process-local memory is not cluster-compatible; PostgreSQL or Valkey is required for shared durable ownership. |
-| Executable evidence | `TestGrantConsumptionCarriesAuthenticatedIssuer`, `TestBothMemoryPathsIsolateIssuerReplayIdentity`, `TestPostgresIssuerTupleQuotasAndRenewal`, `TestExpiredIdenticalGrantCannotReceiveFreshQuota`, `TestSQLConsumptionBindsBothIdentityParameters`, `TestLegacyMigrationBindsOwnerAndLeavesTransactionCallerOwned`, `TestIssuerReplayKeysPreserveLegacyQuotaAndSeparateNamespaces`, and the existing atomicity/unknown-outcome tests |
+| Executable evidence | `TestGrantConsumptionCarriesAuthenticatedIssuer`, `TestBothMemoryPathsIsolateIssuerReplayIdentity`, `TestPostgresIssuerTupleQuotasAndRenewal`, `TestExpiredIdenticalGrantCannotReceiveFreshQuota`, `TestSQLConsumptionBindsBothIdentityParameters`, `TestLegacyMigrationBindsOwnerAndLeavesTransactionCallerOwned`, `TestIssuerReplayKeysPreserveLegacyQuotaAndSeparateNamespaces`, `TestMemoryConsumptionIsAtomicAtTheUseLimit`, `TestConsumptionStoreRejectsConflictingIdentityAndExpiresState`, `TestStoreSerializesConcurrentOneTimeConsumption`, and `TestUnknownConsumptionOutcomeFailsClosed` |
 | Public surface | `Payload.MaxUses`, `Consumption`, `ConsumptionResult`, `ConsumptionStore`, `Grant.Consume`, and memory, PostgreSQL, and Valkey adapters |
 | Upstream record | No referenced standard defines this state machine; RFC 9110 idempotency does not resolve transaction commit ambiguity. |
 | Reconsider when | A new adapter proves equivalent atomicity, durability, expiry, and unknown-outcome semantics under its deployment topology. |
@@ -264,7 +264,7 @@ Machine contract: `capability maintainers`; `omission`; `application-policy`;
 `RFC 9110 HTTP Semantics`; `RFC 9110`; `rfc9110-source`;
 `https://www.rfc-editor.org/rfc/rfc9110.txt`; section `9.2.2`;
 `not specified`. Positive MaxUses values require an explicit ConsumptionStore
-that atomically binds capability identity, expiry, and maximum uses. One atomic
+that atomically binds exact issuer/capability-ID identity, expiry, and maximum uses. One atomic
 state owner is required to prevent concurrent overuse. Process-local memory is
 not cluster-compatible. Credible alternatives also include Consume after the
 side effect, Retry every error, Treat timeout as rejection, and Expose atomic
@@ -272,7 +272,7 @@ store ownership and unknown outcomes explicitly. Documentation bindings:
 `docs/specification-decisions.md` and `docs/replay-and-revocation.md`. RFC 9110
 idempotency does not resolve capability transaction commit ambiguity.
 
-Exact bindings: Positive MaxUses values require an explicit ConsumptionStore that atomically binds capability identity, expiry, and maximum uses. One atomic state owner is required to prevent concurrent overuse. Process-local memory is not cluster-compatible. Consume after the side effect. Expose atomic store ownership and unknown outcomes explicitly. RFC 9110 idempotency does not resolve capability transaction commit ambiguity.
+Exact bindings: Positive MaxUses values require an explicit ConsumptionStore that atomically binds exact issuer/capability-ID identity, expiry, and maximum uses. One atomic state owner is required to prevent concurrent overuse. Counts are bounded per tuple; memory aggregate admission remains an open boundary. Issuer-scoped consumption and explicit durable migration are next-major contracts; token wire is unchanged. Process-local memory is not cluster-compatible. Consume after the side effect. Expose atomic store ownership and unknown outcomes explicitly. RFC 9110 idempotency does not resolve capability transaction commit ambiguity.
 
 ## CAPABILITY-DEC-009: Revocation matching and consistency
 

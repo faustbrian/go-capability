@@ -21,6 +21,10 @@ the module follows semantic versioning.
 
 ### Changed
 
+- Align CAPABILITY-DEC-008 with issuer-scoped replay, explicit migration and
+  the still-open aggregate memory bound; preserve its superseded decision.
+  CAPABILITY-DEC-008 sha256:c52bd015b8580939acdd4e948d207792883daf4f6c58fedf17316f0cc4bb94e9
+
 - Key bounded consumption by authenticated issuer and capability ID across
   core, both memory paths, PostgreSQL and Valkey. Require issuer in direct
   consumption requests, explicit caller-owned PostgreSQL schema-v2 backfill,
