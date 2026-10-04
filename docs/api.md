@@ -7,8 +7,8 @@
 3. `Parse` checks framing and canonical bytes without returning authority.
 4. `Verify` authenticates the token, time interval, key lifecycle, and optional
    `RevocationChecker`, returning an immutable `Grant`.
-5. `Grant.Authorize` compares the attempted `Use` with every encoded authority
-   dimension.
+5. `Grant.Authorize` compares the attempted `Use` audience, subject/bearer mode,
+   resource, operation, tenant, and caveats. It does not check an expected issuer.
 6. `Grant.Consume` records bounded use through an atomic `ConsumptionStore`.
 
 `Limits` is required on every parser and issuer. `DefaultLimits` is the reviewed
@@ -61,8 +61,16 @@ All returned payload maps and slices are defensive copies. Caller-owned
 contexts, database handles, HTTP bodies, clocks, and remote clients remain
 caller-owned. No API starts background work.
 
-Operational failures return the documented `Err*` category. Arbitrary
-provider and adapter causes are discarded rather than retained in the error
-graph; only `context.Canceled` and `context.DeadlineExceeded` remain available
-through `errors.Is`. Keep detailed provider diagnostics in a separately
-redacted operational channel, never in capability-facing errors.
+Package-sanitized operational failures return the documented `Err*` category.
+Those redacted paths discard arbitrary provider and adapter causes; only the
+safe `context.Canceled` and `context.DeadlineExceeded` classifications are
+retained. Trusted resolver policy failures are normalized to `ErrUnknownKey`
+or `ErrAlgorithmMismatch`.
+
+This is not a blanket guarantee for every adapter error. Direct store calls
+can return raw client errors, and `Grant.Consume` returns the original store
+error when `errors.Is` matches `ErrReplayExhausted` or `ErrReplayConflict`.
+Such a match does not sanitize a wrapped diagnostic. Keep provider diagnostics
+in a separately redacted operational channel, never in capability-facing
+responses. See the [repository security model](security-review.md) for the
+source scope and remaining boundaries.
