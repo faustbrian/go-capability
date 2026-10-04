@@ -2,7 +2,9 @@
 
 ## Atomic consumption
 
-`ConsumptionStore.Consume` owns the synchronization for one capability ID. It
+`ConsumptionStore.Consume` owns synchronization for the exact authenticated
+`(Issuer, CapabilityID)` tuple. Missing issuer fails closed. `Grant.Consume`
+forwards the authenticated issuer rather than accepting a caller-selected one. It
 must atomically compare the persisted identity, expiry, signed maximum, and
 current count, then increment only when the result remains within the maximum.
 `false then insert`, leases, local mutexes in a multi-process deployment, and
@@ -28,6 +30,21 @@ not part of correctness for a live capability.
 
 The memory adapter is atomic only inside one process. Restart loses all state.
 It is not suitable for horizontally scaled one-time actions.
+
+PostgreSQL uses the database transaction clock and rejects requests at or beyond
+expiry with `ErrReplayExhausted` before loading or writing quota state. This
+prevents fresh allowance for an expired identical grant whether its old row
+remains or was cleaned. A genuinely future-expiry replacement can renew an
+expired row; a changed expiry or maximum on a live row remains a conflict.
+Verification skew does not extend store acceptance. Valkey likewise rejects
+expired requests using its server clock, while memory retains its existing
+invalid-configuration classification for expired direct requests.
+
+Durable upgrades require explicit single-legacy-issuer ownership and fencing
+all old writers; no adapter silently infers ownership or resets allowances.
+PostgreSQL schema version 2 is a caller-owned transaction migration. Valkey's
+mandatory `LegacyIssuer` retains that owner's exact old key. See the
+[migration and retirement requirements](adoption.md#issuer-scoped-replay-next-major).
 
 ## Revocation
 

@@ -20,16 +20,16 @@ func TestConsumptionStoreValidationCleanupAndExpiry(t *testing.T) {
 	}
 	clock := &clock{now: now}
 	store, _ := memory.NewConsumptionStore(clock)
-	valid := capability.Consumption{CapabilityID: "cap", MaxUses: 2, ExpiresAt: now.Add(time.Minute)}
+	valid := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap", MaxUses: 2, ExpiresAt: now.Add(time.Minute)}
 	for name, test := range map[string]struct {
 		ctx     context.Context
 		request capability.Consumption
 		want    error
 	}{
 		"nil context": {request: valid, want: capability.ErrInvalidConfiguration},
-		"empty ID":    {ctx: context.Background(), request: capability.Consumption{MaxUses: 1, ExpiresAt: valid.ExpiresAt}, want: capability.ErrInvalidConfiguration},
-		"zero uses":   {ctx: context.Background(), request: capability.Consumption{CapabilityID: "cap", ExpiresAt: valid.ExpiresAt}, want: capability.ErrInvalidConfiguration},
-		"expired":     {ctx: context.Background(), request: capability.Consumption{CapabilityID: "cap", MaxUses: 1, ExpiresAt: now}, want: capability.ErrInvalidConfiguration},
+		"empty ID":    {ctx: context.Background(), request: capability.Consumption{Issuer: "ordinary-issuer", MaxUses: 1, ExpiresAt: valid.ExpiresAt}, want: capability.ErrInvalidConfiguration},
+		"zero uses":   {ctx: context.Background(), request: capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap", ExpiresAt: valid.ExpiresAt}, want: capability.ErrInvalidConfiguration},
+		"expired":     {ctx: context.Background(), request: capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap", MaxUses: 1, ExpiresAt: now}, want: capability.ErrInvalidConfiguration},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := store.Consume(test.ctx, test.request); !errors.Is(err, test.want) {

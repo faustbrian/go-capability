@@ -6,8 +6,11 @@ import (
 	"time"
 )
 
-// Consumption is the immutable identity and bound for one atomic use attempt.
+// Consumption binds an exact authenticated issuer and capability ID to one
+// immutable expiry and maximum-use bound. Issuer is required; stores must not
+// merge different issuer namespaces even when their capability IDs match.
 type Consumption struct {
+	Issuer       string
 	CapabilityID string
 	ExpiresAt    time.Time
 	MaxUses      uint32
@@ -42,6 +45,9 @@ func (grant Grant) Consume(ctx context.Context, store ConsumptionStore) (Consump
 	if err := contextError(ctx); err != nil {
 		return ConsumptionResult{}, err
 	}
+	if grant.payload.Issuer == "" {
+		return ConsumptionResult{}, ErrInvalidConfiguration
+	}
 	if grant.payload.MaxUses == 0 {
 		return ConsumptionResult{Reusable: true}, nil
 	}
@@ -49,6 +55,7 @@ func (grant Grant) Consume(ctx context.Context, store ConsumptionStore) (Consump
 		return ConsumptionResult{}, ErrInvalidConfiguration
 	}
 	result, err := store.Consume(ctx, Consumption{
+		Issuer:       grant.payload.Issuer,
 		CapabilityID: grant.payload.ID,
 		ExpiresAt:    grant.payload.ExpiresAt,
 		MaxUses:      grant.payload.MaxUses,

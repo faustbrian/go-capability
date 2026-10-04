@@ -22,11 +22,13 @@ type consumptionRecord struct {
 	expiresAt time.Time
 }
 
+type consumptionIdentity struct{ issuer, capabilityID string }
+
 // ConsumptionStore owns process-local atomic replay state.
 type ConsumptionStore struct {
 	mu      sync.Mutex
 	clock   Clock
-	records map[string]consumptionRecord
+	records map[consumptionIdentity]consumptionRecord
 }
 
 // NewConsumptionStore constructs an empty process-local store.
@@ -34,7 +36,7 @@ func NewConsumptionStore(clock Clock) (*ConsumptionStore, error) {
 	if clock == nil {
 		return nil, capability.ErrInvalidConfiguration
 	}
-	return &ConsumptionStore{clock: clock, records: make(map[string]consumptionRecord)}, nil
+	return &ConsumptionStore{clock: clock, records: make(map[consumptionIdentity]consumptionRecord)}, nil
 }
 
 // Consume atomically records one use or returns ErrReplayExhausted without incrementing.
@@ -46,14 +48,15 @@ func (store *ConsumptionStore) Consume(ctx context.Context, request capability.C
 		return capability.ConsumptionResult{}, err
 	}
 	now := store.clock.Now()
-	if request.CapabilityID == "" || request.MaxUses == 0 || !request.ExpiresAt.After(now) {
+	if request.Issuer == "" || request.CapabilityID == "" || request.MaxUses == 0 || !request.ExpiresAt.After(now) {
 		return capability.ConsumptionResult{}, capability.ErrInvalidConfiguration
 	}
 	store.mu.Lock()
 	defer store.mu.Unlock()
-	record, exists := store.records[request.CapabilityID]
+	identity := consumptionIdentity{issuer: request.Issuer, capabilityID: request.CapabilityID}
+	record, exists := store.records[identity]
 	if exists && !record.expiresAt.After(now) {
-		delete(store.records, request.CapabilityID)
+		delete(store.records, identity)
 		exists = false
 	}
 	if exists && (record.maxUses != request.MaxUses || !record.expiresAt.Equal(request.ExpiresAt)) {
@@ -66,7 +69,7 @@ func (store *ConsumptionStore) Consume(ctx context.Context, request capability.C
 		return capability.ConsumptionResult{}, capability.ErrReplayExhausted
 	}
 	record.uses++
-	store.records[request.CapabilityID] = record
+	store.records[identity] = record
 	return capability.ConsumptionResult{Use: record.uses, Remaining: record.maxUses - record.uses}, nil
 }
 

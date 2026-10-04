@@ -43,6 +43,15 @@ compares method, canonical URL, profile, and optional SHA-256 body digest.
 `ConsumptionStore` is the replaceable atomic-use contract. The
 `adapters/memory`, `postgres`, and `valkey` packages implement it for
 process-local, PostgreSQL, and Valkey ownership respectively.
+Every store keys by the exact `(Consumption.Issuer, Consumption.CapabilityID)`
+identity; issuer is required, different issuers do not share allowance, and the
+same live tuple's expiry and maximum cannot be changed. Custom adapters must
+implement this next-major contract rather than silently ignoring the new field.
+PostgreSQL requires explicit schema-v2 `MigrateLegacyConsumption` in a
+caller-owned transaction; construction does not migrate. Valkey requires
+`Options.LegacyIssuer`, including on an empty ledger, and preserves that
+owner's ID-only keys. Both require old-writer fencing and proven legacy
+ownership or old-grant retirement. See [migration](adoption.md#issuer-scoped-replay-next-major).
 `RevocationChecker` is the read boundary; `adapters/memory` supplies exact
 process-local revocation sets. PostgreSQL and Valkey remain domain-owned paths
 because they own the capability replay model and atomic consumption behavior.

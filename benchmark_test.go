@@ -75,7 +75,7 @@ func BenchmarkVerifyURLHMACSHA256(b *testing.B) {
 func BenchmarkMemoryConsume(b *testing.B) {
 	clock := benchmarkClock{now: testNow}
 	store, _ := capabilitymemory.NewConsumptionStore(clock)
-	request := capability.Consumption{CapabilityID: "benchmark", ExpiresAt: testNow.Add(time.Hour), MaxUses: ^uint32(0)}
+	request := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "benchmark", ExpiresAt: testNow.Add(time.Hour), MaxUses: ^uint32(0)}
 	b.ReportAllocs()
 	for b.Loop() {
 		_, _ = store.Consume(context.Background(), request)

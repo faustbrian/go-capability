@@ -72,7 +72,7 @@ func TestConsumptionSupportsBoundedAndReusableCapabilities(t *testing.T) {
 func TestConsumptionStoreRejectsConflictingIdentityAndExpiresState(t *testing.T) {
 	clock := &mutableClock{now: testNow}
 	store, _ := capmemory.NewConsumptionStore(clock)
-	request := capability.Consumption{CapabilityID: "cap-42", MaxUses: 2, ExpiresAt: testNow.Add(time.Minute)}
+	request := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap-42", MaxUses: 2, ExpiresAt: testNow.Add(time.Minute)}
 	if _, err := store.Consume(context.Background(), request); err != nil {
 		t.Fatalf("Consume() error = %v", err)
 	}

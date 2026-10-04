@@ -23,7 +23,7 @@ designed to reject payload tampering, capability widening, algorithm downgrade,
 parser differentials, URL parameter smuggling, authority substitution, and
 traversal ambiguity at this package's boundary. Bounded replay also requires
 explicit consumption through a suitable store with a correctly isolated
-capability-ID namespace. Verification requires an independently selected issuer
+issuer/capability-ID namespace. Verification requires an independently selected issuer
 and matching trusted key ownership; attempted use separately requires its exact
 issuer. Verification alone does not consume a use or protect a business side effect. The format does not hide
 payload contents, authenticate a human, decide business policy, guarantee global
@@ -104,7 +104,8 @@ constant time and fail as `ErrURLBinding`.
 
 Parsing produces no authority. Verification proves the canonical token,
 validity interval, trusted key lifecycle, and configured revocation result.
-Authorization then compares audience, subject/bearer mode, resource,
+Authorization then compares explicit issuer, audience, subject/bearer mode, resource,
 operation, tenant, and all caveats. Consumption is a fourth explicit step for
-bounded-use grants. Middleware may carry a verified `Grant`, but applications
+bounded-use grants and binds the authenticated issuer/ID tuple to its signed
+maximum and expiry. Middleware may carry a verified `Grant`, but applications
 must keep the final authorization and protected side effect visible.

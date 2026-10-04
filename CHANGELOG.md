@@ -7,6 +7,11 @@ the module follows semantic versioning.
 
 ### Fixed
 
+- Reject expired PostgreSQL consumption before any quota write using its
+  transaction clock. A skew-accepted identical grant cannot regain allowance
+  from an expired or cleaned row; genuinely future-expiry replacement of an
+  expired row retains its established renewal behavior.
+
 - Sanitize wrapped replay-policy errors returned by `Grant.Consume`, preserving
   `errors.Is` policy and safe context classifications without exposing store
   diagnostics or arbitrary causes. Bare policy sentinels retain their identity;
@@ -16,13 +21,25 @@ the module follows semantic versioning.
 
 ### Changed
 
+- Align CAPABILITY-DEC-008 with issuer-scoped replay, explicit migration and
+  the still-open aggregate memory bound; preserve its superseded decision.
+  CAPABILITY-DEC-008 sha256:c52bd015b8580939acdd4e948d207792883daf4f6c58fedf17316f0cc4bb94e9
+
+- Key bounded consumption by authenticated issuer and capability ID across
+  core, both memory paths, PostgreSQL and Valkey. Require issuer in direct
+  consumption requests, explicit caller-owned PostgreSQL schema-v2 backfill,
+  and mandatory Valkey legacy-owner configuration preserving its exact old key
+  and quota. This is a next-major contract: fence all old writers and prove one
+  legacy issuer or retire old grants before activation; no implicit owner or
+  live quota reset is supported.
+
 - Require explicit trusted issuer selection in core and both HTTP verification
   paths, trusted issuer ownership on resolved keys and `KeySet` entries, and
   exact attempted-use issuer authorization. Missing issuer configuration no
   longer defaults to token authority. This intentionally breaking next-major
   contract requires consumer migration; token serialization and globally unique
-  key IDs remain unchanged. Replay identities and persisted store schemas are
-  unchanged and their issuer migration remains open.
+  key IDs remain unchanged. This issuer-selection step preceded the separate
+  issuer-scoped consumption and migration changes described above.
 
 - Update PostgreSQL interoperability to pgx 5.11.0, including Go 1.27
   `database/sql` scanning and driver codec fixes. Callers configuring a
