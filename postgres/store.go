@@ -26,7 +26,8 @@ type beginner interface {
 }
 
 type transaction interface {
-	load(context.Context, string) (storedConsumption, bool, error)
+	now(context.Context) (time.Time, error)
+	load(context.Context, string, string) (storedConsumption, bool, error)
 	insert(context.Context, capability.Consumption) (bool, error)
 	replace(context.Context, capability.Consumption, uint32) error
 	cleanup(context.Context, time.Time) (int64, error)
@@ -38,7 +39,8 @@ type transaction interface {
 type ConsumptionStore struct{ database beginner }
 
 // NewConsumptionStore binds store to db. The schema in migrations must be
-// installed before use. db remains caller-owned and is never closed here.
+// installed and MigrateLegacyConsumption committed before use. db remains
+// caller-owned and is never closed here.
 func NewConsumptionStore(db *sql.DB) (*ConsumptionStore, error) {
 	if db == nil {
 		return nil, capability.ErrInvalidConfiguration
@@ -76,7 +78,16 @@ func (store *ConsumptionStore) consumeOnce(ctx context.Context, request capabili
 	if err != nil {
 		return capability.ConsumptionResult{}, false, err
 	}
-	record, found, err := tx.load(ctx, request.CapabilityID)
+	now, err := tx.now(ctx)
+	if err != nil {
+		return capability.ConsumptionResult{}, false, err
+	}
+	// Verification skew cannot revive a store-expired grant or recreate its
+	// quota after cleanup. Use the same database transaction clock as row expiry.
+	if !request.ExpiresAt.After(now) {
+		return capability.ConsumptionResult{}, false, capability.ErrReplayExhausted
+	}
+	record, found, err := tx.load(ctx, request.Issuer, request.CapabilityID)
 	if err != nil {
 		_ = tx.Rollback()
 		return capability.ConsumptionResult{}, false, err
@@ -151,7 +162,8 @@ func (store *ConsumptionStore) Cleanup(ctx context.Context, cutoff time.Time) (i
 }
 
 func validateRequest(ctx context.Context, request capability.Consumption) error {
-	if ctx == nil || request.CapabilityID == "" || len(request.CapabilityID) > 256 ||
+	if ctx == nil || request.Issuer == "" || len(request.Issuer) > 256 || !utf8.ValidString(request.Issuer) ||
+		request.CapabilityID == "" || len(request.CapabilityID) > 256 ||
 		!utf8.ValidString(request.CapabilityID) || request.MaxUses == 0 || request.ExpiresAt.IsZero() {
 		return capability.ErrInvalidConfiguration
 	}
@@ -170,13 +182,19 @@ func (database sqlBeginner) begin(ctx context.Context) (transaction, error) {
 
 type sqlTransaction struct{ transaction *sql.Tx }
 
-func (tx sqlTransaction) load(ctx context.Context, capabilityID string) (storedConsumption, bool, error) {
+func (tx sqlTransaction) now(ctx context.Context) (time.Time, error) {
+	var now time.Time
+	err := tx.transaction.QueryRowContext(ctx, `SELECT CURRENT_TIMESTAMP`).Scan(&now)
+	return now, err
+}
+
+func (tx sqlTransaction) load(ctx context.Context, issuer, capabilityID string) (storedConsumption, bool, error) {
 	var record storedConsumption
 	err := tx.transaction.QueryRowContext(ctx, `
 SELECT uses, max_uses, expires_at, expires_at <= CURRENT_TIMESTAMP
 FROM capability_consumptions
-WHERE capability_id = $1
-FOR UPDATE`, capabilityID).Scan(&record.uses, &record.maxUses, &record.expiresAt, &record.expired)
+WHERE issuer = $1 AND capability_id = $2
+FOR UPDATE`, issuer, capabilityID).Scan(&record.uses, &record.maxUses, &record.expiresAt, &record.expired)
 	if errors.Is(err, sql.ErrNoRows) {
 		return storedConsumption{}, false, nil
 	}
@@ -185,9 +203,9 @@ FOR UPDATE`, capabilityID).Scan(&record.uses, &record.maxUses, &record.expiresAt
 
 func (tx sqlTransaction) insert(ctx context.Context, request capability.Consumption) (bool, error) {
 	result, err := tx.transaction.ExecContext(ctx, `
-INSERT INTO capability_consumptions (capability_id, uses, max_uses, expires_at)
-VALUES ($1, 1, $2, $3)
-ON CONFLICT (capability_id) DO NOTHING`, request.CapabilityID, request.MaxUses, request.ExpiresAt)
+INSERT INTO capability_consumptions (issuer, capability_id, uses, max_uses, expires_at)
+VALUES ($1, $2, 1, $3, $4)
+ON CONFLICT (issuer, capability_id) DO NOTHING`, request.Issuer, request.CapabilityID, request.MaxUses, request.ExpiresAt)
 	if err != nil {
 		return false, err
 	}
@@ -198,8 +216,8 @@ ON CONFLICT (capability_id) DO NOTHING`, request.CapabilityID, request.MaxUses, 
 func (tx sqlTransaction) replace(ctx context.Context, request capability.Consumption, uses uint32) error {
 	_, err := tx.transaction.ExecContext(ctx, `
 UPDATE capability_consumptions
-SET uses = $2, max_uses = $3, expires_at = $4
-WHERE capability_id = $1`, request.CapabilityID, uses, request.MaxUses, request.ExpiresAt)
+SET uses = $3, max_uses = $4, expires_at = $5
+WHERE issuer = $1 AND capability_id = $2`, request.Issuer, request.CapabilityID, uses, request.MaxUses, request.ExpiresAt)
 	return err
 }
 

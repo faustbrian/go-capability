@@ -120,8 +120,15 @@ encoded with `url.Values.Encode`; exactly one value per query name is allowed.
 
 `MaxUses == 0` means reusable. Positive limits require a `ConsumptionStore`
 whose `Consume` operation atomically commits only while the count remains below
-the signed maximum. Any storage error has an unknown outcome and is returned as
-`ErrConsumptionUnknown`; do not retry the business side effect blindly.
+the signed maximum for the authenticated issuer/capability-ID tuple. Missing
+issuer is rejected. Replay exhaustion and identity conflict are terminal;
+other storage errors have an unknown outcome and are returned as
+`ErrConsumptionUnknown`. Do not retry the business side effect blindly.
+
+Durable next-major adoption requires explicit legacy ownership and fencing all
+old writers. PostgreSQL's schema-v2 migration is caller-transaction-owned;
+Valkey's required `LegacyIssuer` preserves its owner's exact old keys and quotas.
+See [replay migration guidance](docs/adoption.md#issuer-scoped-replay-next-major).
 
 `adapters/memory.ConsumptionStore` and `adapters/memory.Revocations` are
 process-local adapters. They are suitable only when one process owns all

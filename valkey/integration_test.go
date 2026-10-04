@@ -38,13 +38,13 @@ func TestValkeyConsumptionSurvivesClientRecreation(t *testing.T) {
 			t.Errorf("cleanup error = %v", err)
 		}
 	})
-	store, err := capabilityvalkey.NewConsumptionStore(capabilityvalkey.Options{
+	store, err := capabilityvalkey.NewConsumptionStore(capabilityvalkey.Options{LegacyIssuer: "ordinary-issuer",
 		Client: valkeyEvaler{client: first}, KeyPrefix: prefix,
 	})
 	if err != nil {
 		t.Fatalf("NewConsumptionStore() error = %v", err)
 	}
-	request := capability.Consumption{CapabilityID: id, MaxUses: 1, ExpiresAt: time.Now().Add(time.Minute).UTC()}
+	request := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: id, MaxUses: 1, ExpiresAt: time.Now().Add(time.Minute).UTC()}
 	if result, err := store.Consume(t.Context(), request); err != nil || result.Use != 1 {
 		t.Fatalf("Consume(first) = %#v, %v", result, err)
 	}
@@ -52,7 +52,7 @@ func TestValkeyConsumptionSurvivesClientRecreation(t *testing.T) {
 
 	second := openValkey(t, address)
 	defer second.Close()
-	store, err = capabilityvalkey.NewConsumptionStore(capabilityvalkey.Options{
+	store, err = capabilityvalkey.NewConsumptionStore(capabilityvalkey.Options{LegacyIssuer: "ordinary-issuer",
 		Client: valkeyEvaler{client: second}, KeyPrefix: prefix,
 	})
 	if err != nil {
@@ -72,7 +72,7 @@ func TestValkeyConsumptionSurvivesCallerProcessExit(t *testing.T) {
 	id := os.Getenv("CAPABILITY_PROCESS_ID")
 	if os.Getenv("CAPABILITY_VALKEY_PROCESS_CHILD") == "1" {
 		client := openValkey(t, address)
-		store, err := capabilityvalkey.NewConsumptionStore(capabilityvalkey.Options{
+		store, err := capabilityvalkey.NewConsumptionStore(capabilityvalkey.Options{LegacyIssuer: "ordinary-issuer",
 			Client: valkeyEvaler{client: client}, KeyPrefix: prefix,
 		})
 		if err != nil {
@@ -82,7 +82,7 @@ func TestValkeyConsumptionSurvivesCallerProcessExit(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Parse(child expiry) error = %v", err)
 		}
-		request := capability.Consumption{CapabilityID: id, MaxUses: 1, ExpiresAt: expiresAt}
+		request := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: id, MaxUses: 1, ExpiresAt: expiresAt}
 		if result, err := store.Consume(t.Context(), request); err != nil || result.Use != 1 {
 			t.Fatalf("Consume(child) = %#v, %v", result, err)
 		}
@@ -122,13 +122,13 @@ func TestValkeyConsumptionSurvivesCallerProcessExit(t *testing.T) {
 	}
 	client := openValkey(t, address)
 	defer client.Close()
-	store, err := capabilityvalkey.NewConsumptionStore(capabilityvalkey.Options{
+	store, err := capabilityvalkey.NewConsumptionStore(capabilityvalkey.Options{LegacyIssuer: "ordinary-issuer",
 		Client: valkeyEvaler{client: client}, KeyPrefix: prefix,
 	})
 	if err != nil {
 		t.Fatalf("NewConsumptionStore(parent) error = %v", err)
 	}
-	request := capability.Consumption{CapabilityID: id, MaxUses: 1, ExpiresAt: expiresAt}
+	request := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: id, MaxUses: 1, ExpiresAt: expiresAt}
 	if _, err := store.Consume(t.Context(), request); !errors.Is(err, capability.ErrReplayExhausted) {
 		t.Fatalf("Consume(after process exit) error = %v", err)
 	}

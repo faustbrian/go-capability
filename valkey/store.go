@@ -52,22 +52,28 @@ type Evaler interface {
 
 // Options configures Valkey key ownership.
 type Options struct {
-	Client    Evaler
-	KeyPrefix string
+	// LegacyIssuer is the explicit owner-proven namespace of the ID-only ledger
+	// under KeyPrefix. It is required even for a new empty ledger. All old writers
+	// must be fenced before activation; unknown ownership requires retirement.
+	LegacyIssuer string
+	Client       Evaler
+	KeyPrefix    string
 }
 
 // ConsumptionStore atomically consumes bounded capabilities in Valkey.
 type ConsumptionStore struct {
-	client Evaler
-	prefix string
+	legacyIssuer string
+	client       Evaler
+	prefix       string
 }
 
 // NewConsumptionStore validates a client and fixed key prefix.
 func NewConsumptionStore(options Options) (*ConsumptionStore, error) {
-	if options.Client == nil || !validPrefix(options.KeyPrefix) {
+	if options.Client == nil || !validPrefix(options.KeyPrefix) || options.LegacyIssuer == "" ||
+		len(options.LegacyIssuer) > 256 || !utf8.ValidString(options.LegacyIssuer) {
 		return nil, capability.ErrInvalidConfiguration
 	}
-	return &ConsumptionStore{client: options.Client, prefix: options.KeyPrefix}, nil
+	return &ConsumptionStore{client: options.Client, prefix: options.KeyPrefix, legacyIssuer: options.LegacyIssuer}, nil
 }
 
 // Consume executes one constant script against one declared, digest-derived key.
@@ -77,6 +83,13 @@ func (store *ConsumptionStore) Consume(ctx context.Context, request capability.C
 	}
 	digest := sha256.Sum256([]byte(request.CapabilityID))
 	key := store.prefix + hex.EncodeToString(digest[:])
+	if request.Issuer != store.legacyIssuer {
+		// Length framing makes the exact tuple unambiguous. The marker keeps its
+		// domain separate from every legacy ID-only digest under the same prefix.
+		identity := "capability-consumption-v2\x00" + strconv.Itoa(len(request.Issuer)) + ":" + request.Issuer + strconv.Itoa(len(request.CapabilityID)) + ":" + request.CapabilityID
+		digest = sha256.Sum256([]byte(identity))
+		key = store.prefix + "v2:" + hex.EncodeToString(digest[:])
+	}
 	response, err := store.client.Eval(
 		ctx, consumeScript, []string{key},
 		strconv.FormatUint(uint64(request.MaxUses), 10),
@@ -118,7 +131,8 @@ func (store *ConsumptionStore) Consume(ctx context.Context, request capability.C
 }
 
 func validateRequest(ctx context.Context, request capability.Consumption) error {
-	if ctx == nil || request.CapabilityID == "" || len(request.CapabilityID) > 256 ||
+	if ctx == nil || request.Issuer == "" || len(request.Issuer) > 256 || !utf8.ValidString(request.Issuer) ||
+		request.CapabilityID == "" || len(request.CapabilityID) > 256 ||
 		!utf8.ValidString(request.CapabilityID) || request.MaxUses == 0 ||
 		request.ExpiresAt.IsZero() || request.ExpiresAt.UnixMilli() <= 0 {
 		return capability.ErrInvalidConfiguration

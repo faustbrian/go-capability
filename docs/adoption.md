@@ -37,11 +37,58 @@ Its pinned contracts and consumers require deliberate next-major adoption before
 identity-platform or ecosystem completion can be claimed. Existing published-v1
 consumers remain on their selected v1 behavior until explicitly migrated.
 
-This stage does not change `Consumption` or any replay-store schema or key.
-Issuer-scoped replay identity and safe migration of live counters remain open;
-continue isolating stores or ensuring globally unique capability IDs. A future
-store migration must address old/new verifier coexistence and existing quotas,
-not silently reset use allowances.
+### Issuer-scoped replay (next major)
+
+`Consumption.Issuer` is required. Custom stores must atomically key by the
+exact `(Issuer, CapabilityID)` tuple, preserving its count, maximum and expiry.
+Both memory paths implement this identity but remain process-local and lose
+state on restart. A matching ID from another issuer has an independent quota;
+changing a live tuple's signed maximum or expiry remains a conflict.
+
+Before activating new durable writers, prove the existing ID-only ledger has
+one legacy issuer and fence and drain **all** old writers, including restarted
+or delayed workers. Old and new writers must not run concurrently against the
+migrated ledger. Table locks alone do not establish this operational fence.
+
+For PostgreSQL, retain migration `001_capability_consumptions.sql`. Apply it for
+a fresh database, then run `postgres.MigrateLegacyConsumption(ctx, tx, owner)`
+in a caller-owned transaction before using the new store. This is schema version
+2: it exclusively locks the table, parameterizes the explicit owner backfill,
+preserves `uses`, `max_uses` and `expires_at`, and replaces the ID-only primary
+key with `(issuer, capability_id)`. The function neither commits nor rolls back.
+Roll back on failure and commit before activating new writers; do not rerun it
+on an already upgraded schema. Missing migration fails database operations
+rather than supplying an implicit owner. Direct migration errors remain
+caller-owned diagnostics. Store construction never runs a migration.
+
+For Valkey, `Options.LegacyIssuer` is mandatory, including a fresh empty ledger.
+Naming an empty ledger's initial owner is different from proving an existing
+ledger's single owner. Preserve the existing `KeyPrefix` and mapped owner:
+that issuer retains the **exact** old ID-only digest key and remaining quota.
+Other issuers use domain-separated, length-framed tuple keys. Consumption
+remains one atomic EVAL on one declared key; there is no cross-slot probe or
+claim-derived owner. Changing the mapping or prefix on a live ledger can reset
+quotas and is not supported.
+
+If ownership is unknown or the old ledger mixed issuers, do not guess an owner,
+reinterpret records or switch key formulas to regain allowances. Fence issuance
+and every old writer, retire all old grants beyond expiry plus maximum accepted
+skew and relevant clock/replication bounds, and remove retired state under the
+application owner's migration plan before initializing a proven empty ledger.
+Verify retained counters and activation fences independently. Rollback after
+multi-issuer activation cannot simply drop the issuer column or restore old
+writers; keep writers fenced and use an owner-reviewed recovery plan.
+
+PostgreSQL rejects a request at or beyond expiry using the database transaction
+clock, even if `Verify` accepts it within skew. Neither a retained expired row
+nor a cleaned/absent row can supply fresh quota for that same expired grant.
+A genuinely future-expiry replacement after the previous row expires retains
+the established renewal behavior; IDs should still not be reused for ordinary
+issuance. Memory and Valkey also make separate store-clock expiry decisions.
+Align application clocks, skew and consumption windows.
+
+These are source contracts and required deployment steps, not evidence that a
+database, ledger, consumer or public major release has been migrated.
 
 ### Adapter package paths
 

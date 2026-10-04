@@ -2,21 +2,21 @@
 
 ## Model revision and source scope
 
-Repository threat model revision **3**, dated **2026-10-04**, covers
+Repository threat model revision **4**, dated **2026-10-04**, covers
 `github.com/faustbrian/go-capability` at baseline commit
-`06b8bf9dad845288f638c9cf6569624a7d598adf` plus the strict issuer correction
+`402a122e5cc11c281961b50f5dffe0323a2e598b` plus the replay identity correction
 identified by these immutable runtime Git blobs:
 
 | Source | Git blob |
 | --- | --- |
-| `token.go` | `1f842ca6a8ded73f925d859784c149c71b7be85c` |
-| `resolver.go` | `ac08cc6bcb814065766398bc3d03dfd968b7296f` |
-| `grant.go` | `8d81641c76576dccfb3fe9ab48ad5dbac0148a28` |
-| `adapters/http/http.go` | `2e3f236fae68374b58bfb1ce6cfdb0a84184ff85` |
-| `caphttp/http.go` | `1637ea2b5b4b227191d9bc35bda863de52f87fb3` |
+| `replay.go` | `ca199d1d55ff2137c7144164b87a52c1054ef5e4` |
+| `adapters/memory/consumption.go` | `5f348123bef6ff36960e6ffe7f08e51ab69b4eba` |
+| `postgres/store.go` | `acfd096c834335bdb064780ce1d18ec72f23dcbd` |
+| `postgres/migration.go` | `9ce9fc191f9a46aca1d24de5ceadd08ff5dc2bec` |
+| `valkey/store.go` | `f0724d81823214d11397c9a61988ad1a4b64972c` |
 
 All other runtime source is unchanged from that baseline, which includes the
-revision 2 consumption policy-error correction. These are inspected immutable
+revision 2 policy-error and revision 3 strict issuer corrections. These are inspected immutable
 source identities, not a prospective documentation commit, release, or
 deployment identity. Revision 1 covered the unchanged runtime at
 `4a9574a4b5903b86b43bdfb8424c8faa3db885cf` and its reporting-policy link.
@@ -65,7 +65,9 @@ because a token verifies.
   [PostgreSQL](../postgres/store.go), or [Valkey](../valkey/store.go).
   Database credentials, clients, migrations, replication, and persistence
   are operational trust boundaries. PostgreSQL queries use parameters;
-  Valkey uses a constant script and a digest-derived key.
+  Valkey uses a constant script and a digest-derived key. Every store binds
+  issuer and capability ID; PostgreSQL requires a caller-owned schema-v2
+  migration, and Valkey requires explicit legacy-owner mapping to retain quotas.
 - [Revocation](../revocation.go) consults an optional checker; the
   [memory checker](../adapters/memory/revocation.go) is process-local.
 - The [HTTP adapter](../adapters/http/http.go) verifies and carries a grant;
@@ -199,8 +201,9 @@ Each owner must reassess its entry at the stated review condition.
 
 - **Owner:** integrating application owner.
 - **Rationale:** verification uses the supplied clock and skew; stores have
-  separate expiry decisions. Valkey expires records at the supplied expiry,
-  not at verifier expiry plus skew.
+  separate expiry decisions. PostgreSQL and Valkey reject store-expired requests
+  even when verification accepts them within skew. Memory likewise requires a
+  future expiry; cleanup and clock disagreement remain application concerns.
 - **Mitigation:** use trusted clocks, constrain skew, align verification and
   consumption windows, never reuse capability IDs, and do not remove live
   replay state before every relevant acceptance window has closed.
@@ -258,6 +261,21 @@ Each owner must reassess its entry at the stated review condition.
 - **Review condition:** dependency, action, toolchain, maintainer-access, or
   release changes, a relevant advisory, or suspected pipeline compromise.
 
+### R9: Legacy ledger ownership and mixed-version writers
+
+- **Owner:** integrating application owner for provenance, writer fencing,
+  counter audit and activation; repository maintainer for migration source.
+- **Rationale:** ID-only legacy records cannot reveal their issuer. Library
+  configuration cannot prove a deployment's ownership or stop its old writers.
+- **Mitigation:** prove one legacy owner, fence and drain every old writer,
+  preserve counts/maximums/expiry through the explicit PostgreSQL transaction
+  or exact Valkey owner mapping, and audit before activation. Unknown or mixed
+  ownership requires retiring all old grants and state before an empty-ledger
+  initialization, not resetting live quotas. Do not change a live Valkey prefix
+  or mapping, or roll back by dropping issuer identity after multi-issuer use.
+- **Review condition:** owner mapping, key prefix, migration, deployment,
+  rollback, writer version or durable-store topology changes.
+
 ## Unresolved security-goal boundaries
 
 The following source limitations are not certified safe by this model and are
@@ -268,10 +286,11 @@ not accepted findings merely because integration precautions are possible:
   key-source trust, published major adoption and direct-consumer migration still
   require validation; the former identity-platform additive-only compatibility
   promise is not satisfied by this intentional break. See [migration](adoption.md#explicit-issuer-policy-next-major).
-- `Consumption` carries only capability ID, expiry, and maximum uses. The
-  bundled replay stores do not bind identity to issuer. Applications must
-  ensure globally unique IDs across a shared store or separate issuer-owned
-  stores; issuer-scoped replay isolation is not a library guarantee.
+- `Consumption` now carries issuer and the bundled stores bind issuer/ID
+  identity. Actual durable migration, legacy-owner provenance, old-writer
+  fencing, retained counters, rollback and multi-issuer deployment have not
+  been established by source tests. [Migration requirements](adoption.md#issuer-scoped-replay-next-major)
+  cannot be replaced with a new key formula or an inferred owner.
 - The memory consumption and revocation stores have no finite entry-count or
   aggregate retained-byte admission. Their direct APIs also retain caller
   strings without an explicit byte budget. Cleanup and application ingress
@@ -315,3 +334,12 @@ paths' issuer forwarding tests. It does not close replay-schema, finite-memory,
 publication, ecosystem, or identity-platform adoption boundaries. Claims of
 passed gates must refer to attributable results for the relevant immutable
 source and environment rather than to this inventory.
+
+Revision 4 adds [ordinary authenticated replay tests](../replay_identity_test.go),
+PostgreSQL's existing in-memory transaction seam and SQL-driver parameter tests,
+and Valkey's ordinary Evaler seam. The PostgreSQL regression separately covers
+a retained exhausted expired row and absent/cleaned state for the same normally
+issued grant accepted within verification skew; neither may regain quota.
+Future-expiry renewal is a separate oracle. These are source-boundary results,
+not an executed PostgreSQL migration, Valkey script/service qualification,
+old-writer fence, persisted-counter audit or published-consumer result.

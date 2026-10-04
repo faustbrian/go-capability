@@ -29,6 +29,7 @@ func TestPostgresConsumptionSurvivesClientRecreation(t *testing.T) {
 	if _, err := first.ExecContext(t.Context(), string(schema)); err != nil {
 		t.Fatalf("install migration error = %v", err)
 	}
+	migratePostgres(t, first)
 	id := "integration-" + time.Now().UTC().Format("20060102150405.000000000")
 	t.Cleanup(func() {
 		database, openErr := sql.Open("pgx", dsn)
@@ -47,7 +48,7 @@ func TestPostgresConsumptionSurvivesClientRecreation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewConsumptionStore() error = %v", err)
 	}
-	request := capability.Consumption{CapabilityID: id, MaxUses: 1, ExpiresAt: time.Now().Add(time.Minute).UTC()}
+	request := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: id, MaxUses: 1, ExpiresAt: time.Now().Add(time.Minute).UTC()}
 	if result, err := store.Consume(t.Context(), request); err != nil || result.Use != 1 {
 		t.Fatalf("Consume(first) = %#v, %v", result, err)
 	}
@@ -81,7 +82,7 @@ func TestPostgresConsumptionSurvivesCallerProcessExit(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Parse(child expiry) error = %v", err)
 		}
-		request := capability.Consumption{CapabilityID: os.Getenv("CAPABILITY_PROCESS_ID"), MaxUses: 1, ExpiresAt: expiresAt}
+		request := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: os.Getenv("CAPABILITY_PROCESS_ID"), MaxUses: 1, ExpiresAt: expiresAt}
 		if result, err := store.Consume(t.Context(), request); err != nil || result.Use != 1 {
 			t.Fatalf("Consume(child) = %#v, %v", result, err)
 		}
@@ -97,6 +98,7 @@ func TestPostgresConsumptionSurvivesCallerProcessExit(t *testing.T) {
 	if _, err := database.ExecContext(t.Context(), string(schema)); err != nil {
 		t.Fatalf("install migration error = %v", err)
 	}
+	migratePostgres(t, database)
 	id := "process-" + time.Now().UTC().Format("20060102150405.000000000")
 	expiresAt := time.Now().Add(time.Minute).UTC().Truncate(time.Microsecond)
 	t.Cleanup(func() {
@@ -130,9 +132,24 @@ func TestPostgresConsumptionSurvivesCallerProcessExit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewConsumptionStore(parent) error = %v", err)
 	}
-	request := capability.Consumption{CapabilityID: id, MaxUses: 1, ExpiresAt: expiresAt}
+	request := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: id, MaxUses: 1, ExpiresAt: expiresAt}
 	if _, err := store.Consume(t.Context(), request); !errors.Is(err, capability.ErrReplayExhausted) {
 		t.Fatalf("Consume(after process exit) error = %v", err)
+	}
+}
+
+func migratePostgres(t *testing.T, db *sql.DB) {
+	t.Helper()
+	tx, err := db.BeginTx(t.Context(), nil)
+	if err != nil {
+		t.Fatal("migration begin failed")
+	}
+	defer func() { _ = tx.Rollback() }()
+	if err := capabilitypostgres.MigrateLegacyConsumption(t.Context(), tx, "ordinary-issuer"); err != nil {
+		t.Fatal("explicit issuer migration failed")
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal("migration commit failed")
 	}
 }
 

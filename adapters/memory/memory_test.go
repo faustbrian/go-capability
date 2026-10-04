@@ -22,7 +22,7 @@ func TestSuccessorPreservesMemoryCompatibility(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	request := capability.Consumption{
+	request := capability.Consumption{Issuer: "ordinary-issuer",
 		CapabilityID: "cap-42", MaxUses: 1, ExpiresAt: now.Add(time.Minute),
 	}
 	result, err := store.Consume(context.Background(), request)

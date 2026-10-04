@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -17,10 +18,141 @@ import (
 
 var driverSequence atomic.Int64
 
+func TestPostgresIssuerTupleQuotasAndRenewal(t *testing.T) {
+	backend := newFakeBackend()
+	store := newStore(backend)
+	expiry := time.Now().Add(time.Hour)
+	for _, issuer := range []string{"issuer-one", "issuer-two"} {
+		request := capability.Consumption{Issuer: issuer, CapabilityID: "ordinary-capability", MaxUses: 1, ExpiresAt: expiry}
+		result, err := store.Consume(context.Background(), request)
+		if err != nil || result.Use != 1 || result.Remaining != 0 {
+			t.Error("different issuer shared PostgreSQL quota")
+		}
+		if _, err := store.Consume(context.Background(), request); !errors.Is(err, capability.ErrReplayExhausted) {
+			t.Error("same tuple regained quota")
+		}
+		conflict := request
+		conflict.MaxUses = 2
+		if _, err := store.Consume(context.Background(), conflict); !errors.Is(err, capability.ErrReplayConflict) {
+			t.Error("same tuple changed bound")
+		}
+		conflict = request
+		conflict.ExpiresAt = expiry.Add(time.Minute)
+		if _, err := store.Consume(context.Background(), conflict); !errors.Is(err, capability.ErrReplayConflict) {
+			t.Error("same tuple changed live expiry")
+		}
+		backend.records[[2]string{issuer, request.CapabilityID}] = fakeRecord{uses: 1, maxUses: 1, expiresAt: time.Now().Add(-time.Minute), expired: true}
+		result, err = store.Consume(context.Background(), request)
+		if err != nil || result.Use != 1 {
+			t.Error("future-expiry replacement was rejected")
+		}
+	}
+	if _, err := store.Consume(context.Background(), capability.Consumption{CapabilityID: "ordinary-capability", MaxUses: 1, ExpiresAt: expiry}); !errors.Is(err, capability.ErrInvalidConfiguration) {
+		t.Error("PostgreSQL accepted missing issuer")
+	}
+}
+
+func TestSQLConsumptionBindsBothIdentityParameters(t *testing.T) {
+	state := &stubSQLState{queryValues: []driver.Value{int64(1), int64(2), time.Now().Add(time.Hour), false}, execRows: 1}
+	db := openStubDatabase(t, state)
+	tx, err := (sqlBeginner{database: db}).begin(context.Background())
+	if err != nil {
+		t.Fatal("ordinary transaction failed")
+	}
+	defer func() { _ = tx.Rollback() }()
+	for _, issuer := range []string{"issuer-one", "issuer-two"} {
+		if _, _, err := tx.load(context.Background(), issuer, "ordinary-capability"); err != nil {
+			t.Fatal("ordinary row load failed")
+		}
+		if !strings.Contains(state.query, "WHERE issuer = $1 AND capability_id = $2") || len(state.queryArgs) != 2 || state.queryArgs[0].Value != issuer || state.queryArgs[1].Value != "ordinary-capability" {
+			t.Error("load did not bind exact issuer and ID")
+		}
+		request := capability.Consumption{Issuer: issuer, CapabilityID: "ordinary-capability", MaxUses: 2, ExpiresAt: time.Now().Add(time.Hour)}
+		if _, err := tx.insert(context.Background(), request); err != nil {
+			t.Fatal("ordinary insert failed")
+		}
+		op := state.executions[len(state.executions)-1]
+		if !strings.Contains(op.query, "ON CONFLICT (issuer, capability_id)") || len(op.arguments) != 4 || op.arguments[0].Value != issuer || op.arguments[1].Value != request.CapabilityID {
+			t.Error("insert ignored issuer identity")
+		}
+		if err := tx.replace(context.Background(), request, 2); err != nil {
+			t.Fatal("ordinary update failed")
+		}
+		op = state.executions[len(state.executions)-1]
+		if !strings.Contains(op.query, "WHERE issuer = $1 AND capability_id = $2") || len(op.arguments) != 5 || op.arguments[0].Value != issuer || op.arguments[1].Value != request.CapabilityID || op.arguments[2].Value != int64(2) {
+			t.Error("update ignored issuer or use ordinal")
+		}
+	}
+}
+
+func TestLegacyMigrationBindsOwnerAndLeavesTransactionCallerOwned(t *testing.T) {
+	state := &stubSQLState{execRows: 1}
+	db := openStubDatabase(t, state)
+	tx, err := db.BeginTx(context.Background(), nil)
+	if err != nil {
+		t.Fatal("ordinary transaction failed")
+	}
+	defer func() { _ = tx.Rollback() }()
+	if err := MigrateLegacyConsumption(context.Background(), tx, ""); !errors.Is(err, capability.ErrInvalidConfiguration) || len(state.executions) != 0 {
+		t.Fatal("migration inferred legacy owner")
+	}
+	if err := MigrateLegacyConsumption(context.Background(), tx, "ordinary-issuer"); err != nil {
+		t.Fatal("ordinary explicit migration failed")
+	}
+	if len(state.executions) != 7 || state.executions[0].query != "LOCK TABLE capability_consumptions IN ACCESS EXCLUSIVE MODE" || state.executions[6].query != "ALTER TABLE capability_consumptions ADD PRIMARY KEY (issuer, capability_id)" {
+		t.Fatal("migration did not fence schema and install composite identity")
+	}
+	backfill := state.executions[2]
+	if backfill.query != "UPDATE capability_consumptions SET issuer = $1" || len(backfill.arguments) != 1 || backfill.arguments[0].Value != "ordinary-issuer" {
+		t.Fatal("migration rewrote quota columns or interpolated owner")
+	}
+	if state.commits != 0 || state.rollbacks != 0 {
+		t.Fatal("migration took transaction ownership")
+	}
+	if err := tx.Commit(); err != nil || state.commits != 1 {
+		t.Fatal("caller could not commit migration")
+	}
+}
+
+func TestExpiredIdenticalGrantCannotReceiveFreshQuota(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	issued := now.Add(-time.Minute)
+	expiry := now.Add(-10 * time.Second)
+	key := make([]byte, 32)
+	signer, _ := capability.NewHMACSHA256Signer("ordinary-key", key)
+	verifier, _ := capability.NewHMACSHA256Verifier(key)
+	payload := capability.Payload{Version: 1, Issuer: "ordinary-issuer", Audiences: []string{"ordinary-audience"}, Bearer: true, Resource: "ordinary-resource", Operation: "read", ID: "ordinary-capability", MaxUses: 1, IssuedAt: issued, NotBefore: issued, ExpiresAt: expiry}
+	token, err := capability.Issue(context.Background(), payload, signer, capability.DefaultLimits())
+	if err != nil {
+		t.Fatal("ordinary issuance failed")
+	}
+	grant, err := capability.Verify(context.Background(), token, capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
+		return capability.ResolvedKey{Issuer: payload.Issuer, Verifier: verifier}, nil
+	}), capability.VerifyOptions{Issuer: payload.Issuer, Now: now, Skew: time.Minute, Limits: capability.DefaultLimits()})
+	if err != nil {
+		t.Fatal("ordinary skew verification failed")
+	}
+	for _, retained := range []bool{true, false} {
+		backend := newFakeBackend()
+		if retained {
+			backend.records[[2]string{payload.Issuer, payload.ID}] = fakeRecord{uses: 1, maxUses: 1, expiresAt: expiry, expired: true}
+		}
+		if _, err := grant.Consume(context.Background(), newStore(backend)); !errors.Is(err, capability.ErrReplayExhausted) {
+			t.Error("expired identical grant received fresh quota")
+		}
+		if retained && backend.records[[2]string{payload.Issuer, payload.ID}].uses != 1 {
+			t.Error("expired rejection changed existing quota")
+		}
+		if !retained && len(backend.records) != 0 {
+			t.Error("expired rejection inserted new quota")
+		}
+	}
+}
+
 func TestStoreSerializesConcurrentOneTimeConsumption(t *testing.T) {
 	backend := newFakeBackend()
 	store := newStore(backend)
-	request := capability.Consumption{CapabilityID: "cap-1", MaxUses: 1, ExpiresAt: time.Now().Add(time.Hour)}
+	request := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap-1", MaxUses: 1, ExpiresAt: time.Now().Add(time.Hour)}
 	const contenders = 24
 	var accepted atomic.Int64
 	var exhausted atomic.Int64
@@ -49,7 +181,7 @@ func TestStoreSerializesConcurrentOneTimeConsumption(t *testing.T) {
 func TestStoreReplacesExpiredStateAndRejectsIdentityConflict(t *testing.T) {
 	backend := newFakeBackend()
 	store := newStore(backend)
-	request := capability.Consumption{CapabilityID: "cap-2", MaxUses: 2, ExpiresAt: time.Now().Add(time.Hour)}
+	request := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap-2", MaxUses: 2, ExpiresAt: time.Now().Add(time.Hour)}
 	first, err := store.Consume(context.Background(), request)
 	if err != nil || first.Use != 1 || first.Remaining != 1 {
 		t.Fatalf("Consume() = %#v, %v", first, err)
@@ -72,7 +204,7 @@ func TestStorePropagatesCommitAndCancellationFailures(t *testing.T) {
 	backend := newFakeBackend()
 	backend.commitErr = errors.New("commit result unknown")
 	store := newStore(backend)
-	request := capability.Consumption{CapabilityID: "cap-3", MaxUses: 1, ExpiresAt: time.Now().Add(time.Hour)}
+	request := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap-3", MaxUses: 1, ExpiresAt: time.Now().Add(time.Hour)}
 	if _, err := store.Consume(context.Background(), request); !errors.Is(err, backend.commitErr) {
 		t.Fatalf("Consume(commit failure) error = %v", err)
 	}
@@ -84,7 +216,7 @@ func TestStorePropagatesCommitAndCancellationFailures(t *testing.T) {
 }
 
 func TestStorePropagatesTransactionFailuresAndRetriesInsertRaces(t *testing.T) {
-	request := capability.Consumption{
+	request := capability.Consumption{Issuer: "ordinary-issuer",
 		CapabilityID: "cap-fault",
 		MaxUses:      2,
 		ExpiresAt:    time.Unix(2_000_000_000, 123_456_789).UTC(),
@@ -117,31 +249,31 @@ func TestStorePropagatesTransactionFailuresAndRetriesInsertRaces(t *testing.T) {
 	}
 	backend = newFakeBackend()
 	backend.replaceErr = errors.New("replace")
-	backend.records[request.CapabilityID] = fakeRecord{uses: 1, maxUses: 2, expiresAt: request.ExpiresAt}
+	backend.records[[2]string{request.Issuer, request.CapabilityID}] = fakeRecord{uses: 1, maxUses: 2, expiresAt: request.ExpiresAt}
 	if _, err := newStore(backend).Consume(context.Background(), request); !errors.Is(err, backend.replaceErr) {
 		t.Fatalf("Consume(replace) error = %v", err)
 	}
 	backend = newFakeBackend()
 	backend.replaceErr = errors.New("replace expired")
-	backend.records[request.CapabilityID] = fakeRecord{uses: 1, maxUses: 2, expiresAt: request.ExpiresAt, expired: true}
+	backend.records[[2]string{request.Issuer, request.CapabilityID}] = fakeRecord{uses: 1, maxUses: 2, expiresAt: request.ExpiresAt, expired: true}
 	if _, err := newStore(backend).Consume(context.Background(), request); !errors.Is(err, backend.replaceErr) {
 		t.Fatalf("Consume(replace expired) error = %v", err)
 	}
 	backend = newFakeBackend()
-	backend.records[request.CapabilityID] = fakeRecord{uses: 1, maxUses: 2, expiresAt: request.ExpiresAt}
+	backend.records[[2]string{request.Issuer, request.CapabilityID}] = fakeRecord{uses: 1, maxUses: 2, expiresAt: request.ExpiresAt}
 	result, err = newStore(backend).Consume(context.Background(), request)
 	if err != nil || result.Use != 2 || result.Remaining != 0 {
 		t.Fatalf("Consume(increment) = %#v, %v", result, err)
 	}
 	backend = newFakeBackend()
 	backend.commitErr = errors.New("increment commit")
-	backend.records[request.CapabilityID] = fakeRecord{uses: 1, maxUses: 2, expiresAt: request.ExpiresAt}
+	backend.records[[2]string{request.Issuer, request.CapabilityID}] = fakeRecord{uses: 1, maxUses: 2, expiresAt: request.ExpiresAt}
 	if _, err := newStore(backend).Consume(context.Background(), request); !errors.Is(err, backend.commitErr) {
 		t.Fatalf("Consume(increment commit) error = %v", err)
 	}
 	backend = newFakeBackend()
 	backend.commitErr = errors.New("expired commit")
-	backend.records[request.CapabilityID] = fakeRecord{uses: 1, maxUses: 2, expiresAt: request.ExpiresAt, expired: true}
+	backend.records[[2]string{request.Issuer, request.CapabilityID}] = fakeRecord{uses: 1, maxUses: 2, expiresAt: request.ExpiresAt, expired: true}
 	if _, err := newStore(backend).Consume(context.Background(), request); !errors.Is(err, backend.commitErr) {
 		t.Fatalf("Consume(expired commit) error = %v", err)
 	}
@@ -189,13 +321,13 @@ func TestStoreValidatesConstructorAndConsumption(t *testing.T) {
 		t.Fatalf("NewConsumptionStore(nil) error = %v", err)
 	}
 	store := newStore(newFakeBackend())
-	valid := capability.Consumption{CapabilityID: "cap", MaxUses: 1, ExpiresAt: time.Now().Add(time.Hour)}
+	valid := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap", MaxUses: 1, ExpiresAt: time.Now().Add(time.Hour)}
 	for name, request := range map[string]capability.Consumption{
-		"empty ID":      {MaxUses: 1, ExpiresAt: valid.ExpiresAt},
-		"long ID":       {CapabilityID: string(make([]byte, 257)), MaxUses: 1, ExpiresAt: valid.ExpiresAt},
-		"invalid UTF-8": {CapabilityID: string([]byte{0xff}), MaxUses: 1, ExpiresAt: valid.ExpiresAt},
-		"zero uses":     {CapabilityID: "cap", ExpiresAt: valid.ExpiresAt},
-		"zero expiry":   {CapabilityID: "cap", MaxUses: 1},
+		"empty ID":      {Issuer: "ordinary-issuer", MaxUses: 1, ExpiresAt: valid.ExpiresAt},
+		"long ID":       {Issuer: "ordinary-issuer", CapabilityID: string(make([]byte, 257)), MaxUses: 1, ExpiresAt: valid.ExpiresAt},
+		"invalid UTF-8": {Issuer: "ordinary-issuer", CapabilityID: string([]byte{0xff}), MaxUses: 1, ExpiresAt: valid.ExpiresAt},
+		"zero uses":     {Issuer: "ordinary-issuer", CapabilityID: "cap", ExpiresAt: valid.ExpiresAt},
+		"zero expiry":   {Issuer: "ordinary-issuer", CapabilityID: "cap", MaxUses: 1},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := store.Consume(context.Background(), request); !errors.Is(err, capability.ErrInvalidConfiguration) {
@@ -215,7 +347,7 @@ func TestStoreValidatesConstructorAndConsumption(t *testing.T) {
 }
 
 func TestConsumeOnceDistinguishesMissingAndExistingRows(t *testing.T) {
-	request := capability.Consumption{
+	request := capability.Consumption{Issuer: "ordinary-issuer",
 		CapabilityID: "missing",
 		MaxUses:      2,
 		ExpiresAt:    time.Unix(2_000_000_000, 987_654_321).UTC(),
@@ -227,7 +359,7 @@ func TestConsumeOnceDistinguishesMissingAndExistingRows(t *testing.T) {
 	}
 
 	request.CapabilityID = "existing"
-	backend.records[request.CapabilityID] = fakeRecord{uses: 1, maxUses: 2, expiresAt: request.ExpiresAt}
+	backend.records[[2]string{request.Issuer, request.CapabilityID}] = fakeRecord{uses: 1, maxUses: 2, expiresAt: request.ExpiresAt}
 	result, retry, err = newStore(backend).consumeOnce(context.Background(), request)
 	if err != nil || retry || result.Use != 2 || result.Remaining != 0 {
 		t.Fatalf("consumeOnce(existing) = %#v, %t, %v", result, retry, err)
@@ -235,13 +367,13 @@ func TestConsumeOnceDistinguishesMissingAndExistingRows(t *testing.T) {
 }
 
 func TestConsumeNormalizesExpiryToPostgreSQLPrecision(t *testing.T) {
-	request := capability.Consumption{
+	request := capability.Consumption{Issuer: "ordinary-issuer",
 		CapabilityID: "postgres-precision",
 		MaxUses:      2,
-		ExpiresAt:    time.Unix(1_700_000_000, 123_456_789).UTC(),
+		ExpiresAt:    time.Now().Add(time.Hour).Truncate(time.Second).Add(123_456_789 * time.Nanosecond).UTC(),
 	}
 	backend := newFakeBackend()
-	backend.records[request.CapabilityID] = fakeRecord{
+	backend.records[[2]string{request.Issuer, request.CapabilityID}] = fakeRecord{
 		uses:      1,
 		maxUses:   request.MaxUses,
 		expiresAt: request.ExpiresAt.Truncate(time.Microsecond),
@@ -251,7 +383,7 @@ func TestConsumeNormalizesExpiryToPostgreSQLPrecision(t *testing.T) {
 	if err != nil || result.Use != 2 || result.Remaining != 0 {
 		t.Fatalf("Consume() = %#v, %v", result, err)
 	}
-	if stored := backend.records[request.CapabilityID].expiresAt; !stored.Equal(request.ExpiresAt.Truncate(time.Microsecond)) {
+	if stored := backend.records[[2]string{request.Issuer, request.CapabilityID}].expiresAt; !stored.Equal(request.ExpiresAt.Truncate(time.Microsecond)) {
 		t.Fatalf("stored expiry = %v", stored)
 	}
 }
@@ -268,11 +400,11 @@ func TestDatabaseSQLAdapterExecutesRowsResultsAndTransactions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("begin() error = %v", err)
 	}
-	record, found, err := tx.load(context.Background(), "cap")
+	record, found, err := tx.load(context.Background(), "ordinary-issuer", "cap")
 	if err != nil || !found || record.uses != 1 || record.maxUses != 2 || record.expired {
 		t.Fatalf("load() = %#v, %t, %v", record, found, err)
 	}
-	request := capability.Consumption{CapabilityID: "cap", MaxUses: 2, ExpiresAt: record.expiresAt}
+	request := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap", MaxUses: 2, ExpiresAt: record.expiresAt}
 	inserted, err := tx.insert(context.Background(), request)
 	if err != nil || !inserted {
 		t.Fatalf("insert() = %t, %v", inserted, err)
@@ -290,7 +422,7 @@ func TestDatabaseSQLAdapterExecutesRowsResultsAndTransactions(t *testing.T) {
 
 	state.queryValues = nil
 	tx, _ = beginner.begin(context.Background())
-	if _, found, err := tx.load(context.Background(), "missing"); err != nil || found {
+	if _, found, err := tx.load(context.Background(), "ordinary-issuer", "missing"); err != nil || found {
 		t.Fatalf("load(missing) found = %t, error = %v", found, err)
 	}
 	if err := tx.Rollback(); err != nil {
@@ -310,13 +442,13 @@ func TestDatabaseSQLAdapterPropagatesDriverFailures(t *testing.T) {
 
 	state.queryErr = errors.New("query")
 	tx, _ := beginner.begin(context.Background())
-	if _, _, err := tx.load(context.Background(), "cap"); !errors.Is(err, state.queryErr) {
+	if _, _, err := tx.load(context.Background(), "ordinary-issuer", "cap"); !errors.Is(err, state.queryErr) {
 		t.Fatalf("load() error = %v", err)
 	}
 	_ = tx.Rollback()
 	state.queryErr = nil
 
-	request := capability.Consumption{CapabilityID: "cap", MaxUses: 1, ExpiresAt: time.Now().Add(time.Hour)}
+	request := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap", MaxUses: 1, ExpiresAt: time.Now().Add(time.Hour)}
 	state.execErr = errors.New("exec")
 	tx, _ = beginner.begin(context.Background())
 	if _, err := tx.insert(context.Background(), request); !errors.Is(err, state.execErr) {
@@ -360,6 +492,11 @@ func openStubDatabase(t *testing.T, state *stubSQLState) *sql.DB {
 }
 
 type stubSQLState struct {
+	query       string
+	queryArgs   []driver.NamedValue
+	executions  []stubSQLExecution
+	commits     int
+	rollbacks   int
 	mu          sync.Mutex
 	queryValues []driver.Value
 	queryErr    error
@@ -368,6 +505,11 @@ type stubSQLState struct {
 	rowsErr     error
 	beginErr    error
 	commitErr   error
+}
+
+type stubSQLExecution struct {
+	query     string
+	arguments []driver.NamedValue
 }
 
 type stubSQLDriver struct{ state *stubSQLState }
@@ -393,18 +535,24 @@ func (connection *stubSQLConnection) BeginTx(context.Context, driver.TxOptions) 
 	}
 	return stubSQLTransaction{state: connection.state}, nil
 }
-func (connection *stubSQLConnection) QueryContext(context.Context, string, []driver.NamedValue) (driver.Rows, error) {
+func (connection *stubSQLConnection) QueryContext(_ context.Context, query string, arguments []driver.NamedValue) (driver.Rows, error) {
 	connection.state.mu.Lock()
 	defer connection.state.mu.Unlock()
+	connection.state.query = query
+	connection.state.queryArgs = append([]driver.NamedValue(nil), arguments...)
 	if connection.state.queryErr != nil {
 		return nil, connection.state.queryErr
+	}
+	if query == "SELECT CURRENT_TIMESTAMP" {
+		return &stubSQLRows{values: []driver.Value{time.Now()}}, nil
 	}
 	values := append([]driver.Value(nil), connection.state.queryValues...)
 	return &stubSQLRows{values: values}, nil
 }
-func (connection *stubSQLConnection) ExecContext(context.Context, string, []driver.NamedValue) (driver.Result, error) {
+func (connection *stubSQLConnection) ExecContext(_ context.Context, query string, arguments []driver.NamedValue) (driver.Result, error) {
 	connection.state.mu.Lock()
 	defer connection.state.mu.Unlock()
+	connection.state.executions = append(connection.state.executions, stubSQLExecution{query: query, arguments: append([]driver.NamedValue(nil), arguments...)})
 	if connection.state.execErr != nil {
 		return nil, connection.state.execErr
 	}
@@ -416,17 +564,28 @@ type stubSQLTransaction struct{ state *stubSQLState }
 func (transaction stubSQLTransaction) Commit() error {
 	transaction.state.mu.Lock()
 	defer transaction.state.mu.Unlock()
+	transaction.state.commits++
 	return transaction.state.commitErr
 }
-func (stubSQLTransaction) Rollback() error { return nil }
+func (transaction stubSQLTransaction) Rollback() error {
+	transaction.state.mu.Lock()
+	defer transaction.state.mu.Unlock()
+	transaction.state.rollbacks++
+	return nil
+}
 
 type stubSQLRows struct {
 	values []driver.Value
 	done   bool
 }
 
-func (*stubSQLRows) Columns() []string { return []string{"uses", "max_uses", "expires_at", "expired"} }
-func (*stubSQLRows) Close() error      { return nil }
+func (rows *stubSQLRows) Columns() []string {
+	if len(rows.values) == 1 {
+		return []string{"now"}
+	}
+	return []string{"uses", "max_uses", "expires_at", "expired"}
+}
+func (*stubSQLRows) Close() error { return nil }
 func (rows *stubSQLRows) Next(destination []driver.Value) error {
 	if rows.done || len(rows.values) == 0 {
 		return io.EOF
@@ -455,7 +614,7 @@ type fakeRecord struct {
 
 type fakeBackend struct {
 	mu              sync.Mutex
-	records         map[string]fakeRecord
+	records         map[[2]string]fakeRecord
 	beginErr        error
 	loadErr         error
 	insertErr       error
@@ -466,7 +625,7 @@ type fakeBackend struct {
 	commitErr       error
 }
 
-func newFakeBackend() *fakeBackend { return &fakeBackend{records: make(map[string]fakeRecord)} }
+func newFakeBackend() *fakeBackend { return &fakeBackend{records: make(map[[2]string]fakeRecord)} }
 
 func (backend *fakeBackend) begin(ctx context.Context) (transaction, error) {
 	if err := ctx.Err(); err != nil {
@@ -481,9 +640,9 @@ func (backend *fakeBackend) begin(ctx context.Context) (transaction, error) {
 
 func (backend *fakeBackend) expire(id string) {
 	backend.mu.Lock()
-	record := backend.records[id]
+	record := backend.records[[2]string{"ordinary-issuer", id}]
 	record.expired = true
-	backend.records[id] = record
+	backend.records[[2]string{"ordinary-issuer", id}] = record
 	backend.mu.Unlock()
 }
 
@@ -492,11 +651,13 @@ type fakeTransaction struct {
 	closed  bool
 }
 
-func (transaction *fakeTransaction) load(_ context.Context, id string) (storedConsumption, bool, error) {
+func (*fakeTransaction) now(context.Context) (time.Time, error) { return time.Now(), nil }
+
+func (transaction *fakeTransaction) load(_ context.Context, issuer, id string) (storedConsumption, bool, error) {
 	if transaction.backend.loadErr != nil {
 		return storedConsumption{}, false, transaction.backend.loadErr
 	}
-	record, found := transaction.backend.records[id]
+	record, found := transaction.backend.records[[2]string{issuer, id}]
 	return storedConsumption(record), found, nil
 }
 
@@ -508,10 +669,10 @@ func (transaction *fakeTransaction) insert(_ context.Context, request capability
 		transaction.backend.insertConflicts--
 		return false, nil
 	}
-	if _, found := transaction.backend.records[request.CapabilityID]; found {
+	if _, found := transaction.backend.records[[2]string{request.Issuer, request.CapabilityID}]; found {
 		return false, nil
 	}
-	transaction.backend.records[request.CapabilityID] = fakeRecord{uses: 1, maxUses: request.MaxUses, expiresAt: request.ExpiresAt}
+	transaction.backend.records[[2]string{request.Issuer, request.CapabilityID}] = fakeRecord{uses: 1, maxUses: request.MaxUses, expiresAt: request.ExpiresAt}
 	return true, nil
 }
 
@@ -519,7 +680,7 @@ func (transaction *fakeTransaction) replace(_ context.Context, request capabilit
 	if transaction.backend.replaceErr != nil {
 		return transaction.backend.replaceErr
 	}
-	transaction.backend.records[request.CapabilityID] = fakeRecord{uses: uses, maxUses: request.MaxUses, expiresAt: request.ExpiresAt}
+	transaction.backend.records[[2]string{request.Issuer, request.CapabilityID}] = fakeRecord{uses: uses, maxUses: request.MaxUses, expiresAt: request.ExpiresAt}
 	return nil
 }
 

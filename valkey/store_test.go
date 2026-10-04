@@ -2,6 +2,8 @@ package valkey_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"strconv"
 	"strings"
@@ -14,13 +16,52 @@ import (
 	capvalkey "github.com/faustbrian/go-capability/valkey"
 )
 
+func TestIssuerReplayKeysPreserveLegacyQuotaAndSeparateNamespaces(t *testing.T) {
+	client := newFakeEvaler()
+	store, err := capvalkey.NewConsumptionStore(capvalkey.Options{Client: client, KeyPrefix: "ordinary:", LegacyIssuer: "issuer-one"})
+	if err != nil {
+		t.Fatal("ordinary mapped configuration rejected")
+	}
+	expiry := time.Now().Add(time.Hour)
+	digest := sha256.Sum256([]byte("ordinary-capability"))
+	oldKey := "ordinary:" + hex.EncodeToString(digest[:])
+	client.state[oldKey] = [3]int64{1, 2, expiry.UnixMilli()}
+	for _, issuer := range []string{"issuer-one", "issuer-two"} {
+		request := capability.Consumption{Issuer: issuer, CapabilityID: "ordinary-capability", MaxUses: 2, ExpiresAt: expiry}
+		result, err := store.Consume(context.Background(), request)
+		if issuer == "issuer-one" {
+			if err != nil || result.Use != 2 || result.Remaining != 0 || client.lastKey != oldKey {
+				t.Error("legacy issuer lost its exact key or quota")
+			}
+		} else if err != nil || result.Use != 1 || result.Remaining != 1 || client.lastKey == oldKey {
+			t.Error("other issuer reused legacy quota")
+		}
+		conflict := request
+		conflict.MaxUses = 3
+		if _, err := store.Consume(context.Background(), conflict); !errors.Is(err, capability.ErrReplayConflict) {
+			t.Error("same tuple changed its bound")
+		}
+		conflict = request
+		conflict.ExpiresAt = expiry.Add(time.Minute)
+		if _, err := store.Consume(context.Background(), conflict); !errors.Is(err, capability.ErrReplayConflict) {
+			t.Error("same tuple changed expiry")
+		}
+	}
+	if _, err := store.Consume(context.Background(), capability.Consumption{CapabilityID: "ordinary-capability", MaxUses: 2, ExpiresAt: expiry}); !errors.Is(err, capability.ErrInvalidConfiguration) {
+		t.Error("Valkey accepted missing issuer")
+	}
+	if _, err := capvalkey.NewConsumptionStore(capvalkey.Options{Client: client, KeyPrefix: "ordinary:"}); !errors.Is(err, capability.ErrInvalidConfiguration) {
+		t.Error("Valkey silently inferred legacy ownership")
+	}
+}
+
 func TestStoreConsumesAtomicallyThroughOneDeclaredValkeyKey(t *testing.T) {
 	client := newFakeEvaler()
-	store, err := capvalkey.NewConsumptionStore(capvalkey.Options{Client: client, KeyPrefix: "cap-use:"})
+	store, err := capvalkey.NewConsumptionStore(capvalkey.Options{LegacyIssuer: "ordinary-issuer", Client: client, KeyPrefix: "cap-use:"})
 	if err != nil {
 		t.Fatalf("NewConsumptionStore() error = %v", err)
 	}
-	request := capability.Consumption{CapabilityID: "cap-1", MaxUses: 1, ExpiresAt: time.Now().Add(time.Hour)}
+	request := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap-1", MaxUses: 1, ExpiresAt: time.Now().Add(time.Hour)}
 	const contenders = 24
 	var accepted atomic.Int64
 	var exhausted atomic.Int64
@@ -51,8 +92,8 @@ func TestStoreConsumesAtomicallyThroughOneDeclaredValkeyKey(t *testing.T) {
 
 func TestStoreMapsConflictOutageAndMalformedResponses(t *testing.T) {
 	client := newFakeEvaler()
-	store, _ := capvalkey.NewConsumptionStore(capvalkey.Options{Client: client, KeyPrefix: "cap-use:"})
-	request := capability.Consumption{CapabilityID: "cap-2", MaxUses: 2, ExpiresAt: time.Now().Add(time.Hour)}
+	store, _ := capvalkey.NewConsumptionStore(capvalkey.Options{LegacyIssuer: "ordinary-issuer", Client: client, KeyPrefix: "cap-use:"})
+	request := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap-2", MaxUses: 2, ExpiresAt: time.Now().Add(time.Hour)}
 	if _, err := store.Consume(context.Background(), request); err != nil {
 		t.Fatalf("Consume() error = %v", err)
 	}
@@ -75,14 +116,14 @@ func TestStoreMapsConflictOutageAndMalformedResponses(t *testing.T) {
 func TestStoreValidatesConfigurationRequestsAndEveryResponseState(t *testing.T) {
 	client := newFakeEvaler()
 	for name, options := range map[string]capvalkey.Options{
-		"nil client":      {KeyPrefix: "cap:"},
-		"empty prefix":    {Client: client},
-		"cluster braces":  {Client: client, KeyPrefix: "cap:{slot}"},
-		"control":         {Client: client, KeyPrefix: "cap:\n"},
-		"space boundary":  {Client: client, KeyPrefix: " "},
-		"delete boundary": {Client: client, KeyPrefix: string(rune(0x7f))},
-		"non ascii":       {Client: client, KeyPrefix: "cäp:"},
-		"oversized":       {Client: client, KeyPrefix: string(make([]byte, 65))},
+		"nil client":      {LegacyIssuer: "ordinary-issuer", KeyPrefix: "cap:"},
+		"empty prefix":    {LegacyIssuer: "ordinary-issuer", Client: client},
+		"cluster braces":  {LegacyIssuer: "ordinary-issuer", Client: client, KeyPrefix: "cap:{slot}"},
+		"control":         {LegacyIssuer: "ordinary-issuer", Client: client, KeyPrefix: "cap:\n"},
+		"space boundary":  {LegacyIssuer: "ordinary-issuer", Client: client, KeyPrefix: " "},
+		"delete boundary": {LegacyIssuer: "ordinary-issuer", Client: client, KeyPrefix: string(rune(0x7f))},
+		"non ascii":       {LegacyIssuer: "ordinary-issuer", Client: client, KeyPrefix: "cäp:"},
+		"oversized":       {LegacyIssuer: "ordinary-issuer", Client: client, KeyPrefix: string(make([]byte, 65))},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := capvalkey.NewConsumptionStore(options); !errors.Is(err, capability.ErrInvalidConfiguration) {
@@ -96,13 +137,13 @@ func TestStoreValidatesConfigurationRequestsAndEveryResponseState(t *testing.T) 
 		"highest ASCII": "~",
 	} {
 		t.Run("valid prefix "+name, func(t *testing.T) {
-			if _, err := capvalkey.NewConsumptionStore(capvalkey.Options{Client: client, KeyPrefix: prefix}); err != nil {
+			if _, err := capvalkey.NewConsumptionStore(capvalkey.Options{LegacyIssuer: "ordinary-issuer", Client: client, KeyPrefix: prefix}); err != nil {
 				t.Fatalf("NewConsumptionStore() error = %v", err)
 			}
 		})
 	}
-	store, _ := capvalkey.NewConsumptionStore(capvalkey.Options{Client: client, KeyPrefix: "cap:"})
-	valid := capability.Consumption{CapabilityID: "cap", MaxUses: 2, ExpiresAt: time.Now().Add(time.Hour)}
+	store, _ := capvalkey.NewConsumptionStore(capvalkey.Options{LegacyIssuer: "ordinary-issuer", Client: client, KeyPrefix: "cap:"})
+	valid := capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap", MaxUses: 2, ExpiresAt: time.Now().Add(time.Hour)}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	for name, test := range map[string]struct {
@@ -111,11 +152,11 @@ func TestStoreValidatesConfigurationRequestsAndEveryResponseState(t *testing.T) 
 	}{
 		"nil context":     {request: valid},
 		"canceled":        {ctx: ctx, request: valid},
-		"empty ID":        {ctx: context.Background(), request: capability.Consumption{MaxUses: 1, ExpiresAt: valid.ExpiresAt}},
-		"zero uses":       {ctx: context.Background(), request: capability.Consumption{CapabilityID: "cap", ExpiresAt: valid.ExpiresAt}},
-		"zero expiry":     {ctx: context.Background(), request: capability.Consumption{CapabilityID: "cap", MaxUses: 1}},
-		"negative expiry": {ctx: context.Background(), request: capability.Consumption{CapabilityID: "cap", MaxUses: 1, ExpiresAt: time.Unix(-1, 0)}},
-		"epoch expiry":    {ctx: context.Background(), request: capability.Consumption{CapabilityID: "cap", MaxUses: 1, ExpiresAt: time.UnixMilli(0)}},
+		"empty ID":        {ctx: context.Background(), request: capability.Consumption{Issuer: "ordinary-issuer", MaxUses: 1, ExpiresAt: valid.ExpiresAt}},
+		"zero uses":       {ctx: context.Background(), request: capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap", ExpiresAt: valid.ExpiresAt}},
+		"zero expiry":     {ctx: context.Background(), request: capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap", MaxUses: 1}},
+		"negative expiry": {ctx: context.Background(), request: capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap", MaxUses: 1, ExpiresAt: time.Unix(-1, 0)}},
+		"epoch expiry":    {ctx: context.Background(), request: capability.Consumption{Issuer: "ordinary-issuer", CapabilityID: "cap", MaxUses: 1, ExpiresAt: time.UnixMilli(0)}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := store.Consume(test.ctx, test.request); err == nil {
