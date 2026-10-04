@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"unicode/utf8"
 
-	"github.com/faustbrian/go-capability"
+	"github.com/faustbrian/go-capability/v2"
 )
 
 // MigrateLegacyConsumption upgrades migration 001 to the issuer-scoped schema

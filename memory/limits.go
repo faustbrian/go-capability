@@ -1,6 +1,6 @@
 package memory
 
-import capabilitymemory "github.com/faustbrian/go-capability/adapters/memory"
+import capabilitymemory "github.com/faustbrian/go-capability/v2/adapters/memory"
 
 // StoreLimits preserves the canonical finite process-local budget contract.
 type StoreLimits = capabilitymemory.StoreLimits

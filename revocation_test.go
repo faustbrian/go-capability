@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-capability"
-	capmemory "github.com/faustbrian/go-capability/adapters/memory"
+	"github.com/faustbrian/go-capability/v2"
+	capmemory "github.com/faustbrian/go-capability/v2/adapters/memory"
 )
 
 func TestVerificationChecksEveryRevocationBoundary(t *testing.T) {

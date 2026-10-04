@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-capability"
-	capabilityvalkey "github.com/faustbrian/go-capability/valkey"
+	"github.com/faustbrian/go-capability/v2"
+	capabilityvalkey "github.com/faustbrian/go-capability/v2/valkey"
 	valkeygo "github.com/valkey-io/valkey-go"
 )
 

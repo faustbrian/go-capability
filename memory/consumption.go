@@ -1,7 +1,7 @@
 // Package memory is the compatibility facade for the target-oriented
 // process-local replay and revocation adapter.
 //
-// Deprecated: use github.com/faustbrian/go-capability/adapters/memory. This
+// Deprecated: use github.com/faustbrian/go-capability/v2/adapters/memory. This
 // package remains supported through the documented compatibility interval.
 package memory
 
@@ -9,8 +9,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/faustbrian/go-capability"
-	capabilitymemory "github.com/faustbrian/go-capability/adapters/memory"
+	"github.com/faustbrian/go-capability/v2"
+	capabilitymemory "github.com/faustbrian/go-capability/v2/adapters/memory"
 )
 
 // Clock supplies wall time for expiry decisions.

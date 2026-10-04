@@ -1,7 +1,7 @@
 // Package caphttp is the compatibility facade for the target-oriented HTTP
 // adapter.
 //
-// Deprecated: use github.com/faustbrian/go-capability/adapters/http. This
+// Deprecated: use github.com/faustbrian/go-capability/v2/adapters/http. This
 // package remains supported through the documented compatibility interval.
 package caphttp
 
@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/faustbrian/go-capability"
-	capabilityhttp "github.com/faustbrian/go-capability/adapters/http"
+	"github.com/faustbrian/go-capability/v2"
+	capabilityhttp "github.com/faustbrian/go-capability/v2/adapters/http"
 )
 
 // Clock supplies request-time wall clock values.

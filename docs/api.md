@@ -1,5 +1,11 @@
 # API reference
 
+This reference describes the unreleased `github.com/faustbrian/go-capability/v2`
+source, not the published unversioned v1 module. All seven public package imports
+use `/v2`; token-wire v1 remains unchanged. The [API baseline](../api/README.md)
+is generated from the actual v2 exported contract. See
+[module adoption](adoption.md#module-and-import-paths-v2-source).
+
 ## Core lifecycle
 
 1. `CanonicalPayload` validates and encodes one `Payload`.

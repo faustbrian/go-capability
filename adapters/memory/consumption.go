@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/faustbrian/go-capability"
+	"github.com/faustbrian/go-capability/v2"
 )
 
 // Clock supplies wall time for expiry decisions.

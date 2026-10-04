@@ -17,6 +17,38 @@
 
 ## Migration
 
+### Module and import paths (v2 source)
+
+Current main declares `github.com/faustbrian/go-capability/v2` at the repository
+root, targeting Go 1.27. There are no version-specific source directories or
+branches. A future stable v2 release uses a root `v2.x.y` Git tag; this source
+change does not publish that tag or prove public module resolution.
+
+Change the integrating module's required major version and all seven package
+imports together:
+
+| Package | v2 source import |
+| --- | --- |
+| Core | `github.com/faustbrian/go-capability/v2` |
+| HTTP | `github.com/faustbrian/go-capability/v2/adapters/http` |
+| Memory | `github.com/faustbrian/go-capability/v2/adapters/memory` |
+| Retained HTTP facade | `github.com/faustbrian/go-capability/v2/caphttp` |
+| Retained memory facade | `github.com/faustbrian/go-capability/v2/memory` |
+| PostgreSQL | `github.com/faustbrian/go-capability/v2/postgres` |
+| Valkey | `github.com/faustbrian/go-capability/v2/valkey` |
+
+Package identifiers remain unchanged. V1 and v2 exported types are distinct;
+mixing imports cannot share grants, resolvers or store interfaces without an
+explicit application boundary. Token payload `Version: 1`, `cap1` framing and
+signed-url-v1 profiles remain wire v1; the Go module major is not a wire version.
+
+The following issuer, replay/migration and finite-admission changes must be
+adopted with the imports, not hidden behind legacy defaults. Maintained external
+consumers and the historical identity-platform additive-only contract are not
+migrated by this source change. Local `make clean-consumer` uses a disposable
+replacement of the owned v2 source; actual release qualification requires a
+fresh public consumer without replacements or workspace assistance.
+
 ### Explicit issuer policy (next major)
 
 Current main intentionally rejects the formerly valid omitted-issuer verification
@@ -109,12 +141,15 @@ record/string budgets are not a byte-exact total heap limit. See
 
 ### Adapter package paths
 
-New code should import `github.com/faustbrian/go-capability/adapters/http` and
-`github.com/faustbrian/go-capability/adapters/memory`. Existing imports of
+For v2 adoption, new code should import `github.com/faustbrian/go-capability/v2/adapters/http`
+and `github.com/faustbrian/go-capability/v2/adapters/memory`. Existing v1 imports of
 `github.com/faustbrian/go-capability/caphttp` and
 `github.com/faustbrian/go-capability/memory` remain source- and
-behavior-compatible facades within the published v1 interval. The next-major
-issuer requirement applies equally to both HTTP paths. Migration updates the import paths and default
+behavior-compatible facades within the published v1 interval. V2 retains
+`github.com/faustbrian/go-capability/v2/caphttp` and
+`github.com/faustbrian/go-capability/v2/memory` as separate facade types; this
+adoption neither removes them nor restarts or shortens the promised interval.
+The explicit issuer requirement applies equally to both HTTP paths. Migration updates the import paths and default
 qualifiers to `capabilityhttp` and `capabilitymemory`; callers may temporarily
 alias the new imports to their old qualifiers when an import-path-only change
 is preferable. Do not move `postgres` or `valkey`; those packages remain

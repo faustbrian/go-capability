@@ -1,4 +1,4 @@
-module github.com/faustbrian/go-capability
+module github.com/faustbrian/go-capability/v2
 
 go 1.27.0
 

@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-capability"
-	capvalkey "github.com/faustbrian/go-capability/valkey"
+	"github.com/faustbrian/go-capability/v2"
+	capvalkey "github.com/faustbrian/go-capability/v2/valkey"
 )
 
 func TestIssuerReplayKeysPreserveLegacyQuotaAndSeparateNamespaces(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-capability"
-	"github.com/faustbrian/go-capability/adapters/memory"
+	"github.com/faustbrian/go-capability/v2"
+	"github.com/faustbrian/go-capability/v2/adapters/memory"
 )
 
 func BenchmarkIssueHMACSHA256(b *testing.B) {

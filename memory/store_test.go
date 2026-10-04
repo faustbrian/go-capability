@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-capability"
-	"github.com/faustbrian/go-capability/memory"
+	"github.com/faustbrian/go-capability/v2"
+	"github.com/faustbrian/go-capability/v2/memory"
 )
 
 func TestConsumptionStoreValidationCleanupAndExpiry(t *testing.T) {

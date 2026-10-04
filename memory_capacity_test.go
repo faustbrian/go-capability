@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-capability"
-	capmemory "github.com/faustbrian/go-capability/adapters/memory"
+	"github.com/faustbrian/go-capability/v2"
+	capmemory "github.com/faustbrian/go-capability/v2/adapters/memory"
 	//lint:ignore SA1019 The supported facade must preserve finite admission semantics.
-	legacy "github.com/faustbrian/go-capability/memory" //nolint:staticcheck // Intentional supported-facade coverage.
+	legacy "github.com/faustbrian/go-capability/v2/memory" //nolint:staticcheck // Intentional supported-facade coverage.
 )
 
 type capacityReplay interface {

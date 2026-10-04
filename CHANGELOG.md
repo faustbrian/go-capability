@@ -21,6 +21,15 @@ the module follows semantic versioning.
 
 ### Changed
 
+- Prepare the root `github.com/faustbrian/go-capability/v2` module and all seven
+  package imports for the intentionally breaking major adoption. Retain both
+  deprecated facades and the unchanged v1 token wire. Consumers must migrate
+  imports together with explicit issuer/key ownership, issuer-scoped replay
+  and persistence migration, finite memory limits and safe error categories.
+  Establish an actual v2 exported-API baseline; the local consumer rehearsal
+  uses a disposable replacement and does not establish public release
+  resolution. No v2 publication is implied by this source change.
+
 - Align CAPABILITY-DEC-008 and CAPABILITY-DEC-009 with finite memory admission,
   safe capacity classification and explicit revocation-writer error ownership;
   retain their prior decisions in the history.
