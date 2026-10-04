@@ -16,6 +16,14 @@ the module follows semantic versioning.
 
 ### Changed
 
+- Require explicit trusted issuer selection in core and both HTTP verification
+  paths, trusted issuer ownership on resolved keys and `KeySet` entries, and
+  exact attempted-use issuer authorization. Missing issuer configuration no
+  longer defaults to token authority. This intentionally breaking next-major
+  contract requires consumer migration; token serialization and globally unique
+  key IDs remain unchanged. Replay identities and persisted store schemas are
+  unchanged and their issuer migration remains open.
+
 - Update PostgreSQL interoperability to pgx 5.11.0, including Go 1.27
   `database/sql` scanning and driver codec fixes. Callers configuring a
   pgx-backed database should review its libpq-compatible DSN parsing

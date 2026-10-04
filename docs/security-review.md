@@ -2,13 +2,21 @@
 
 ## Model revision and source scope
 
-Repository threat model revision **2**, dated **2026-10-04**, covers
+Repository threat model revision **3**, dated **2026-10-04**, covers
 `github.com/faustbrian/go-capability` at baseline commit
-`8e86e00969f59c662ee944d459bdeb693dd1bac7` plus the `Grant.Consume`
-policy-error correction identified by the `replay.go` Git blob
-`86176bb07c86b6ee84194aea4ad3c90b81998daf`.
-Other runtime source is unchanged from
-`31d7c24aec0563cc6ba1df0850d5e19054440bfe`. These are inspected immutable
+`06b8bf9dad845288f638c9cf6569624a7d598adf` plus the strict issuer correction
+identified by these immutable runtime Git blobs:
+
+| Source | Git blob |
+| --- | --- |
+| `token.go` | `1f842ca6a8ded73f925d859784c149c71b7be85c` |
+| `resolver.go` | `ac08cc6bcb814065766398bc3d03dfd968b7296f` |
+| `grant.go` | `8d81641c76576dccfb3fe9ab48ad5dbac0148a28` |
+| `adapters/http/http.go` | `2e3f236fae68374b58bfb1ce6cfdb0a84184ff85` |
+| `caphttp/http.go` | `1637ea2b5b4b227191d9bc35bda863de52f87fb3` |
+
+All other runtime source is unchanged from that baseline, which includes the
+revision 2 consumption policy-error correction. These are inspected immutable
 source identities, not a prospective documentation commit, release, or
 deployment identity. Revision 1 covered the unchanged runtime at
 `4a9574a4b5903b86b43bdfb8424c8faa3db885cf` and its reporting-policy link.
@@ -22,7 +30,7 @@ from module versions and do not require a module release by themselves.
 
 The [protocol narrative](protocol.md#threat-model) and the residual-risk
 register below form this repository model. It is a source-level assessment
-with a narrowly scoped policy-error regression, not a vulnerability scan,
+with narrowly scoped ordinary-input issuer and policy-error regressions, not a vulnerability scan,
 an independent cryptographic audit, a statement that broad security gates
 passed, or completion of the ecosystem security goal.
 
@@ -44,10 +52,13 @@ because a token verifies.
   [URL canonicalization](../url.go) separate attacker bytes from authenticated
   grants. Parsing alone supplies no authority.
 - [Cryptographic implementations](../crypto.go) and
-  [resolvers](../resolver.go) bind the selected algorithm and key lifecycle.
+  [resolvers](../resolver.go) bind the selected algorithm, explicit key issuer
+  ownership, and key lifecycle. Verification requires the application-selected
+  issuer to match both the claim and trusted key ownership.
   Caller-supplied signers, verifiers, and remote resolvers remain trusted code.
 - [Authorization](../grant.go) compares a verified grant with an
-  application-supplied use. Subject authentication, issuer trust, business
+  application-supplied use including explicit issuer. Subject authentication,
+  correct application namespace selection, resolver trust, business
   policy, and the protected side effect remain application boundaries.
 - [Consumption](../replay.go) delegates atomic use counting to
   [memory](../adapters/memory/consumption.go),
@@ -165,7 +176,7 @@ Each owner must reassess its entry at the stated review condition.
 - **Owner:** integrating application owner.
 - **Rationale:** `Grant.Authorize` compares encoded fields, not business policy;
   HTTP middleware does not authorize or consume the grant.
-- **Mitigation:** derive audience, subject, resource, operation, tenant, and
+- **Mitigation:** derive issuer, audience, subject, resource, operation, tenant, and
   caveats from trusted application state; authorize immediately before the
   protected action and keep that action's policy explicit.
 - **Review condition:** a new operation, tenant, audience, authentication path,
@@ -252,9 +263,11 @@ Each owner must reassess its entry at the stated review condition.
 The following source limitations are not certified safe by this model and are
 not accepted findings merely because integration precautions are possible:
 
-- `Verify` resolves by key ID and algorithm without an expected issuer, and
-  `Use` has no issuer field. Applications must explicitly constrain issuer
-  trust; multi-issuer key acceptance is not established by verification alone.
+- Explicit issuer selection, trusted key ownership, and attempted-use issuer
+  comparison now fail closed in this next-major source. Correct configuration,
+  key-source trust, published major adoption and direct-consumer migration still
+  require validation; the former identity-platform additive-only compatibility
+  promise is not satisfied by this intentional break. See [migration](adoption.md#explicit-issuer-policy-next-major).
 - `Consumption` carries only capability ID, expiry, and maximum uses. The
   bundled replay stores do not bind identity to issuer. Applications must
   ensure globally unique IDs across a shared store or separate issuer-owned
@@ -296,6 +309,9 @@ Revision 1 records source and test-definition inspection only. No tests,
 benchmarks, fuzz campaigns, scanners, or runtime services were executed to
 produce it. Revision 2 adds the policy-error correction and focused
 [ordinary-input consumption tests](../consumption_policy_test.go); it does not
-establish runtime-service, scanner, or broad hostile-input results. Claims of
+establish runtime-service, scanner, or broad hostile-input results. Revision 3
+adds [ordinary issuer policy tests](../issuer_policy_test.go) and both owned HTTP
+paths' issuer forwarding tests. It does not close replay-schema, finite-memory,
+publication, ecosystem, or identity-platform adoption boundaries. Claims of
 passed gates must refer to attributable results for the relevant immutable
 source and environment rather than to this inventory.

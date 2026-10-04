@@ -90,9 +90,9 @@ func TestIssueVerifyAndAuthorizeHMACCapability(t *testing.T) {
 		if keyID != "key-2026-08" || algorithm != capability.HMACSHA256 {
 			return capability.ResolvedKey{}, capability.ErrUnknownKey
 		}
-		return capability.ResolvedKey{Verifier: verifier}, nil
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier}, nil
 	})
-	grant, err := capability.Verify(context.Background(), token, resolver, capability.VerifyOptions{
+	grant, err := capability.Verify(context.Background(), token, resolver, capability.VerifyOptions{Issuer: "https://issuer.example",
 		Now:    testNow,
 		Skew:   time.Minute,
 		Limits: capability.DefaultLimits(),
@@ -100,12 +100,12 @@ func TestIssueVerifyAndAuthorizeHMACCapability(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Verify() error = %v", err)
 	}
-	if err := grant.Authorize(capability.Use{
+	if err := grant.Authorize(capability.Use{Issuer: "https://issuer.example",
 		Audience: "download", Resource: "documents/report-42", Operation: "download", Tenant: "tenant-7",
 	}); err != nil {
 		t.Fatalf("Authorize() error = %v", err)
 	}
-	if err := grant.Authorize(capability.Use{
+	if err := grant.Authorize(capability.Use{Issuer: "https://issuer.example",
 		Audience: "download", Resource: "documents/report-43", Operation: "download", Tenant: "tenant-7",
 	}); !errors.Is(err, capability.ErrUnauthorized) {
 		t.Fatalf("Authorize(wrong resource) error = %v", err)
@@ -125,23 +125,23 @@ func TestVerifyRejectsTamperingDowngradeAndInactiveKeys(t *testing.T) {
 	tampered := strings.Join(parts, ".")
 
 	active := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: verifier}, nil
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier}, nil
 	})
-	options := capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
+	options := capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
 	if _, err := capability.Verify(context.Background(), tampered, active, options); !errors.Is(err, capability.ErrInvalidSignature) {
 		t.Fatalf("Verify(tampered) error = %v", err)
 	}
 
 	wrongAlgorithm, _ := capability.NewEd25519Verifier(make(ed25519.PublicKey, ed25519.PublicKeySize))
 	downgraded := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: wrongAlgorithm}, nil
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: wrongAlgorithm}, nil
 	})
 	if _, err := capability.Verify(context.Background(), token, downgraded, options); !errors.Is(err, capability.ErrAlgorithmMismatch) {
 		t.Fatalf("Verify(downgraded resolver) error = %v", err)
 	}
 
 	inactive := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: verifier, Disabled: true}, nil
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier, Disabled: true}, nil
 	})
 	if _, err := capability.Verify(context.Background(), token, inactive, options); !errors.Is(err, capability.ErrKeyDisabled) {
 		t.Fatalf("Verify(disabled key) error = %v", err)
@@ -157,10 +157,10 @@ func TestVerifyKeyRotationOverlapRemovalAndCompromiseResponse(t *testing.T) {
 	newVerifier, _ := capability.NewHMACSHA256Verifier(newKey)
 	oldToken, _ := capability.Issue(context.Background(), validPayload(), oldSigner, capability.DefaultLimits())
 	newToken, _ := capability.Issue(context.Background(), validPayload(), newSigner, capability.DefaultLimits())
-	options := capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
+	options := capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
 
 	overlap, _ := capability.NewKeySet([]capability.Key{
-		{ID: "old", Verifier: oldVerifier}, {ID: "new", Verifier: newVerifier},
+		{Issuer: "https://issuer.example", ID: "old", Verifier: oldVerifier}, {Issuer: "https://issuer.example", ID: "new", Verifier: newVerifier},
 	})
 	for _, token := range []string{oldToken, newToken} {
 		if _, err := capability.Verify(context.Background(), token, overlap, options); err != nil {
@@ -168,12 +168,12 @@ func TestVerifyKeyRotationOverlapRemovalAndCompromiseResponse(t *testing.T) {
 		}
 	}
 
-	removed, _ := capability.NewKeySet([]capability.Key{{ID: "new", Verifier: newVerifier}})
+	removed, _ := capability.NewKeySet([]capability.Key{{Issuer: "https://issuer.example", ID: "new", Verifier: newVerifier}})
 	if _, err := capability.Verify(context.Background(), oldToken, removed, options); !errors.Is(err, capability.ErrUnknownKey) {
 		t.Fatalf("Verify(removed old key) error = %v", err)
 	}
 	revoked, _ := capability.NewKeySet([]capability.Key{
-		{ID: "old", Verifier: oldVerifier, Revoked: true}, {ID: "new", Verifier: newVerifier},
+		{Issuer: "https://issuer.example", ID: "old", Verifier: oldVerifier, Revoked: true}, {Issuer: "https://issuer.example", ID: "new", Verifier: newVerifier},
 	})
 	if _, err := capability.Verify(context.Background(), oldToken, revoked, options); !errors.Is(err, capability.ErrKeyRevoked) {
 		t.Fatalf("Verify(revoked old key) error = %v", err)
@@ -202,12 +202,13 @@ func TestVerifyEd25519AndTimeBoundaries(t *testing.T) {
 	}
 	resolver := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
 		return capability.ResolvedKey{
+			Issuer:    "https://issuer.example",
 			Verifier:  verifier,
 			NotBefore: testNow.Add(-time.Hour),
 			NotAfter:  testNow.Add(time.Hour),
 		}, nil
 	})
-	options := capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
+	options := capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
 	if _, err := capability.Verify(context.Background(), token, resolver, options); err != nil {
 		t.Fatalf("Verify() error = %v", err)
 	}

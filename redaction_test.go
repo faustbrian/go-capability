@@ -31,7 +31,7 @@ func TestOperationalErrorsPreserveClassificationWithoutExposingDiagnostics(t *te
 	}
 
 	token, verifier := hmacFixture(t)
-	options := capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
+	options := capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
 	resolver := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
 		return capability.ResolvedKey{}, diagnostic
 	})
@@ -42,7 +42,7 @@ func TestOperationalErrorsPreserveClassificationWithoutExposingDiagnostics(t *te
 		return false, diagnostic
 	})
 	resolver = capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: verifier}, nil
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier}, nil
 	})
 	_, err = capability.Verify(context.Background(), token, resolver, options)
 	assertRedactedError(t, err, capability.ErrRevocationUnknown, diagnostic)

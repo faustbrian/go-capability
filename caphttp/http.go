@@ -28,6 +28,8 @@ type ErrorHandler func(http.ResponseWriter, *http.Request, error)
 
 // VerifierOptions configures signed-URL verification for one immutable profile.
 type VerifierOptions struct {
+	// Issuer is the required trusted namespace, never inferred from the request.
+	Issuer       string
 	Profile      capability.URLProfile
 	Resolver     capability.Resolver
 	Origin       string
@@ -48,6 +50,7 @@ type Verifier struct {
 // NewVerifier validates an HTTP integration.
 func NewVerifier(options VerifierOptions) (*Verifier, error) {
 	verifier, err := capabilityhttp.NewVerifier(capabilityhttp.VerifierOptions{
+		Issuer:  options.Issuer,
 		Profile: options.Profile, Resolver: options.Resolver, Origin: options.Origin,
 		Clock: options.Clock, Skew: options.Skew, Limits: options.Limits,
 		Revocations: options.Revocations, BodyDigest: capabilityhttp.BodyDigest(options.BodyDigest),

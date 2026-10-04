@@ -88,7 +88,7 @@ func TestParseRejectsMalformedAndAmbiguousTokens(t *testing.T) {
 
 func TestVerifyRejectsResolverAndKeyLifecycleFailures(t *testing.T) {
 	token, verifier := hmacFixture(t)
-	options := capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
+	options := capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
 	resolverFailure := errors.New("resolver unavailable")
 	cases := map[string]struct {
 		key  capability.ResolvedKey
@@ -97,9 +97,9 @@ func TestVerifyRejectsResolverAndKeyLifecycleFailures(t *testing.T) {
 	}{
 		"resolver outage":  {err: resolverFailure, want: capability.ErrKeyResolution},
 		"missing verifier": {want: capability.ErrUnknownKey},
-		"revoked":          {key: capability.ResolvedKey{Verifier: verifier, Revoked: true}, want: capability.ErrKeyRevoked},
-		"not active yet":   {key: capability.ResolvedKey{Verifier: verifier, NotBefore: testNow.Add(time.Second)}, want: capability.ErrKeyNotActive},
-		"no longer active": {key: capability.ResolvedKey{Verifier: verifier, NotAfter: testNow}, want: capability.ErrKeyNotActive},
+		"revoked":          {key: capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier, Revoked: true}, want: capability.ErrKeyRevoked},
+		"not active yet":   {key: capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier, NotBefore: testNow.Add(time.Second)}, want: capability.ErrKeyNotActive},
+		"no longer active": {key: capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier, NotAfter: testNow}, want: capability.ErrKeyNotActive},
 	}
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -124,7 +124,7 @@ func TestVerifyRejectsResolverAndKeyLifecycleFailures(t *testing.T) {
 
 func TestVerifyPreservesUnknownKeyPolicyThroughResolverLayers(t *testing.T) {
 	token, verifier := hmacFixture(t)
-	set, err := capability.NewKeySet([]capability.Key{{ID: "different-key", Verifier: verifier}})
+	set, err := capability.NewKeySet([]capability.Key{{Issuer: "https://issuer.example", ID: "different-key", Verifier: verifier}})
 	if err != nil {
 		t.Fatalf("NewKeySet() error = %v", err)
 	}
@@ -145,7 +145,7 @@ func TestVerifyPreservesUnknownKeyPolicyThroughResolverLayers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewBoundedResolver(mismatch) error = %v", err)
 	}
-	options := capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
+	options := capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
 	for name, test := range map[string]struct {
 		resolver capability.Resolver
 		want     error
@@ -176,16 +176,18 @@ func TestGrantIsDefensiveAndRequiresEveryAuthorityDimension(t *testing.T) {
 		t.Fatalf("Issue() error = %v", err)
 	}
 	grant, err := capability.Verify(context.Background(), token, capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: verifier}, nil
-	}), capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()})
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier}, nil
+	}), capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()})
 	if err != nil {
 		t.Fatalf("Verify() error = %v", err)
 	}
-	use := capability.Use{Audience: "download", Subject: "user-7", Resource: payload.Resource, Operation: payload.Operation, Tenant: payload.Tenant, Caveats: map[string]string{"region": "eu"}}
+	use := capability.Use{Issuer: "https://issuer.example", Audience: "download", Subject: "user-7", Resource: payload.Resource, Operation: payload.Operation, Tenant: payload.Tenant, Caveats: map[string]string{"region": "eu"}}
 	if err := grant.Authorize(use); err != nil {
 		t.Fatalf("Authorize() error = %v", err)
 	}
 	mutations := map[string]func(*capability.Use){
+		"issuer":    func(use *capability.Use) { use.Issuer = "other-issuer" },
+		"resource":  func(use *capability.Use) { use.Resource = "other-resource" },
 		"audience":  func(use *capability.Use) { use.Audience = "upload" },
 		"subject":   func(use *capability.Use) { use.Subject = "user-8" },
 		"operation": func(use *capability.Use) { use.Operation = "delete" },

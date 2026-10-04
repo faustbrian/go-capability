@@ -5,8 +5,10 @@ import (
 	"time"
 )
 
-// Key is immutable verifier policy for one globally unique key ID.
+// Key is immutable verifier policy for one globally unique key ID owned by
+// exactly one explicit issuer namespace.
 type Key struct {
+	Issuer    string
 	ID        string
 	Verifier  Verifier
 	Disabled  bool
@@ -26,7 +28,8 @@ func NewKeySet(keys []Key) (*KeySet, error) {
 	}
 	resolved := make(map[string]ResolvedKey, len(keys))
 	for _, key := range keys {
-		if !validText(key.ID, DefaultLimits().MaxFieldBytes, true) || key.Verifier == nil ||
+		if !validText(key.ID, DefaultLimits().MaxFieldBytes, true) ||
+			!validText(key.Issuer, DefaultLimits().MaxFieldBytes, true) || key.Verifier == nil ||
 			!validAlgorithm(key.Verifier.Algorithm()) ||
 			(!key.NotBefore.IsZero() && !key.NotAfter.IsZero() && !key.NotBefore.Before(key.NotAfter)) {
 			return nil, ErrInvalidConfiguration
@@ -35,6 +38,7 @@ func NewKeySet(keys []Key) (*KeySet, error) {
 			return nil, ErrInvalidConfiguration
 		}
 		resolved[key.ID] = ResolvedKey{
+			Issuer:   key.Issuer,
 			Verifier: key.Verifier, Disabled: key.Disabled, Revoked: key.Revoked,
 			NotBefore: key.NotBefore, NotAfter: key.NotAfter,
 		}
@@ -118,6 +122,9 @@ func (resolver *BoundedResolver) Resolve(ctx context.Context, keyID string, algo
 	}
 	if resolved.Verifier.Algorithm() != algorithm {
 		return ResolvedKey{}, ErrAlgorithmMismatch
+	}
+	if !validText(resolved.Issuer, DefaultLimits().MaxFieldBytes, true) {
+		return ResolvedKey{}, ErrInvalidConfiguration
 	}
 	return resolved, nil
 }

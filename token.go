@@ -34,6 +34,8 @@ type Parsed struct {
 
 // ResolvedKey is trusted key-policy state returned by a Resolver.
 type ResolvedKey struct {
+	// Issuer is the trusted namespace owning this key, not a token-derived claim.
+	Issuer    string
 	Verifier  Verifier
 	Disabled  bool
 	Revoked   bool
@@ -54,8 +56,11 @@ func (function ResolverFunc) Resolve(ctx context.Context, keyID string, algorith
 	return function(ctx, keyID, algorithm)
 }
 
-// VerifyOptions defines the current time, accepted clock skew, and parser limits.
+// VerifyOptions defines trusted issuer selection, time, skew, and parser limits.
 type VerifyOptions struct {
+	// Issuer is selected by trusted application configuration. It is required
+	// and must match both the signed claim and the resolved key's owner.
+	Issuer      string
 	Now         time.Time
 	Skew        time.Duration
 	Limits      Limits
@@ -152,12 +157,16 @@ func Verify(ctx context.Context, token string, resolver Resolver, options Verify
 	if err := contextError(ctx); err != nil {
 		return Grant{}, err
 	}
-	if resolver == nil || options.Now.IsZero() || options.Skew < 0 {
+	if resolver == nil || options.Now.IsZero() || options.Skew < 0 ||
+		!validText(options.Issuer, options.Limits.MaxFieldBytes, true) {
 		return Grant{}, ErrInvalidConfiguration
 	}
 	parsed, err := Parse(token, options.Limits)
 	if err != nil {
 		return Grant{}, err
+	}
+	if parsed.Payload.Issuer != options.Issuer {
+		return Grant{}, ErrUnauthorized
 	}
 	resolved, err := resolver.Resolve(ctx, parsed.Header.KeyID, parsed.Header.Algorithm)
 	if err != nil {
@@ -165,6 +174,12 @@ func Verify(ctx context.Context, token string, resolver Resolver, options Verify
 	}
 	if resolved.Verifier == nil {
 		return Grant{}, ErrUnknownKey
+	}
+	if !validText(resolved.Issuer, options.Limits.MaxFieldBytes, true) {
+		return Grant{}, ErrInvalidConfiguration
+	}
+	if resolved.Issuer != options.Issuer {
+		return Grant{}, ErrUnauthorized
 	}
 	if resolved.Verifier.Algorithm() != parsed.Header.Algorithm {
 		return Grant{}, ErrAlgorithmMismatch

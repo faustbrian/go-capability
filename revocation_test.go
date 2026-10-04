@@ -21,9 +21,9 @@ func TestVerificationChecksEveryRevocationBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Issue() error = %v", err)
 	}
-	options := capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
+	options := capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits()}
 	resolver := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: verifier}, nil
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier}, nil
 	})
 	boundaries := []func(*capmemory.Revocations) error{
 		func(store *capmemory.Revocations) error {
@@ -57,13 +57,13 @@ func TestVerificationChecksEveryRevocationBoundary(t *testing.T) {
 func TestRevocationOutageAndCancellationFailClosed(t *testing.T) {
 	token, verifier := hmacFixture(t)
 	resolver := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: verifier}, nil
+		return capability.ResolvedKey{Issuer: "https://issuer.example", Verifier: verifier}, nil
 	})
 	storeErr := errors.New("revocation store offline")
 	checker := capability.RevocationCheckerFunc(func(context.Context, capability.RevocationQuery) (bool, error) {
 		return false, storeErr
 	})
-	options := capability.VerifyOptions{Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits(), Revocations: checker}
+	options := capability.VerifyOptions{Issuer: "https://issuer.example", Now: testNow, Skew: time.Minute, Limits: capability.DefaultLimits(), Revocations: checker}
 	if _, err := capability.Verify(context.Background(), token, resolver, options); !errors.Is(err, capability.ErrRevocationUnknown) || errors.Is(err, storeErr) {
 		t.Fatalf("Verify() error = %v", err)
 	}

@@ -103,9 +103,9 @@ func TestProtectedHeaderRejectsUnknownTrailingAndNonCanonicalForms(t *testing.T)
 }
 
 func TestVerificationRejectsParserAndVerifierOperationalFailures(t *testing.T) {
-	options := VerifyOptions{Now: internalPayload().IssuedAt, Limits: DefaultLimits()}
+	options := VerifyOptions{Issuer: "issuer", Now: internalPayload().IssuedAt, Limits: DefaultLimits()}
 	resolver := ResolverFunc(func(context.Context, string, Algorithm) (ResolvedKey, error) {
-		return ResolvedKey{Verifier: failingVerifier{err: errors.New("verifier unavailable")}}, nil
+		return ResolvedKey{Issuer: "issuer", Verifier: failingVerifier{err: errors.New("verifier unavailable")}}, nil
 	})
 	if _, err := Verify(context.Background(), "invalid", resolver, options); !errors.Is(err, ErrInvalidToken) {
 		t.Fatalf("Verify(invalid token) error = %v", err)
@@ -267,9 +267,9 @@ func TestSignedURLInternalCaveatsAndCanonicalTransportFailures(t *testing.T) {
 	token, _ := Issue(context.Background(), payload, signer, DefaultLimits())
 	rawURL := "https://example.com/path?a=1&cap=" + url.QueryEscape(token)
 	resolver := ResolverFunc(func(context.Context, string, Algorithm) (ResolvedKey, error) {
-		return ResolvedKey{Verifier: verifier}, nil
+		return ResolvedKey{Issuer: "issuer", Verifier: verifier}, nil
 	})
-	if _, err := VerifyURL(context.Background(), URLRequest{Method: "GET", RawURL: rawURL}, profile, resolver, VerifyOptions{Now: payload.IssuedAt, Limits: DefaultLimits()}); !errors.Is(err, ErrURLBinding) {
+	if _, err := VerifyURL(context.Background(), URLRequest{Method: "GET", RawURL: rawURL}, profile, resolver, VerifyOptions{Issuer: "issuer", Now: payload.IssuedAt, Limits: DefaultLimits()}); !errors.Is(err, ErrURLBinding) {
 		t.Fatalf("VerifyURL(unexpected digest) error = %v", err)
 	}
 }

@@ -163,8 +163,8 @@ func ordinaryConsumptionGrant(t *testing.T, maxUses uint32) capability.Grant {
 		t.Fatal("issue ordinary grant")
 	}
 	grant, err := capability.Verify(context.Background(), token, capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
-		return capability.ResolvedKey{Verifier: verifier}, nil
-	}), capability.VerifyOptions{Now: now, Limits: capability.DefaultLimits()})
+		return capability.ResolvedKey{Issuer: "ordinary-issuer", Verifier: verifier}, nil
+	}), capability.VerifyOptions{Issuer: "ordinary-issuer", Now: now, Limits: capability.DefaultLimits()})
 	if err != nil {
 		t.Fatal("verify ordinary grant")
 	}

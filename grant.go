@@ -9,6 +9,7 @@ type Grant struct {
 
 // Use describes one concrete application operation to authorize.
 type Use struct {
+	Issuer    string
 	Audience  string
 	Subject   string
 	Resource  string
@@ -27,7 +28,8 @@ func (grant Grant) Header() Header { return grant.header }
 
 // Authorize checks exact encoded authority separately from parsing and signature verification.
 func (grant Grant) Authorize(use Use) error {
-	if !contains(grant.payload.Audiences, use.Audience) ||
+	if use.Issuer == "" || grant.payload.Issuer != use.Issuer ||
+		!contains(grant.payload.Audiences, use.Audience) ||
 		grant.payload.Resource != use.Resource || grant.payload.Operation != use.Operation ||
 		grant.payload.Tenant != use.Tenant ||
 		(!grant.payload.Bearer && grant.payload.Subject != use.Subject) {
