@@ -5,6 +5,8 @@ the module follows semantic versioning.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-05
+
 ### Fixed
 
 - Reject expired PostgreSQL consumption before any quota write using its
@@ -21,14 +23,14 @@ the module follows semantic versioning.
 
 ### Changed
 
-- Prepare the root `github.com/faustbrian/go-capability/v2` module and all seven
+- Use the root `github.com/faustbrian/go-capability/v2` module and all seven
   package imports for the intentionally breaking major adoption. Retain both
   deprecated facades and the unchanged v1 token wire. Consumers must migrate
   imports together with explicit issuer/key ownership, issuer-scoped replay
   and persistence migration, finite memory limits and safe error categories.
-  Establish an actual v2 exported-API baseline; the local consumer rehearsal
-  uses a disposable replacement and does not establish public release
-  resolution. No v2 publication is implied by this source change.
+  Establish a new v2 exported-API baseline. Local consumer rehearsal uses a
+  disposable replacement; release qualification requires a separate clean
+  public consumer without replacements or workspace assistance.
 
 - Align CAPABILITY-DEC-008 and CAPABILITY-DEC-009 with finite memory admission,
   safe capacity classification and explicit revocation-writer error ownership;
@@ -42,7 +44,7 @@ the module follows semantic versioning.
   five revocation maps without eviction. Cleanup releases removed replay
   admission, while duplicates and monotonic cutoff updates remain successful
   at capacity. Bound input strings before hashing and clone admitted keys.
-  This next-major behavior requires explicit administrative insertion-error
+  This major-version behavior requires explicit administrative insertion-error
   handling and application-owned cleanup/overload policy; signatures of the
   original constructors remain unchanged.
 
@@ -60,14 +62,14 @@ the module follows semantic versioning.
   core, both memory paths, PostgreSQL and Valkey. Require issuer in direct
   consumption requests, explicit caller-owned PostgreSQL schema-v2 backfill,
   and mandatory Valkey legacy-owner configuration preserving its exact old key
-  and quota. This is a next-major contract: fence all old writers and prove one
+  and quota. This major contract requires fencing all old writers: prove one
   legacy issuer or retire old grants before activation; no implicit owner or
   live quota reset is supported.
 
 - Require explicit trusted issuer selection in core and both HTTP verification
   paths, trusted issuer ownership on resolved keys and `KeySet` entries, and
   exact attempted-use issuer authorization. Missing issuer configuration no
-  longer defaults to token authority. This intentionally breaking next-major
+  longer defaults to token authority. This intentionally breaking major
   contract requires consumer migration; token serialization and globally unique
   key IDs remain unchanged. This issuer-selection step preceded the separate
   issuer-scoped consumption and migration changes described above.
@@ -76,6 +78,14 @@ the module follows semantic versioning.
   `database/sql` scanning and driver codec fixes. Callers configuring a
   pgx-backed database should review its libpq-compatible DSN parsing
   changes; capability storage semantics and database ownership are unchanged.
+
+### Maintenance
+
+- Upgrade the Valkey integration-test client to v1.0.78; production adapters
+  retain their caller-owned `Evaler` boundary. The upstream optional
+  connection-lifetime retention defect remains pre-existing and unresolved.
+- Adopt the immutable shared CI workflow while retaining checksum-verified
+  go-library-tools v1.6.2.
 
 ## [1.1.0] - 2026-09-10
 
@@ -200,6 +210,7 @@ the module follows semantic versioning.
 - Durable replay integration now proves acknowledged consumption survives an
   abrupt caller-process exit in both PostgreSQL and Valkey deployments.
 
-[Unreleased]: https://github.com/faustbrian/go-capability/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/faustbrian/go-capability/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/faustbrian/go-capability/compare/v1.1.1...v2.0.0
 [1.1.0]: https://github.com/faustbrian/go-capability/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/faustbrian/go-capability/releases/tag/v1.0.0
