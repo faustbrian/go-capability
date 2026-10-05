@@ -84,10 +84,11 @@ func TestGrantConsumptionPreservesUnknownOutcomes(t *testing.T) {
 			cause = errors.Join(diagnostic, classification)
 		}
 		result, err := grant.Consume(context.Background(), capability.ConsumptionStoreFunc(func(context.Context, capability.Consumption) (capability.ConsumptionResult, error) {
-			return capability.ConsumptionResult{}, cause
+			return capability.ConsumptionResult{Use: 7, Remaining: 3, Reusable: true}, cause
 		}))
 		if result != (capability.ConsumptionResult{}) || !errors.Is(err, capability.ErrConsumptionUnknown) ||
-			errors.Is(err, capability.ErrReplayExhausted) || errors.Is(err, capability.ErrReplayConflict) {
+			errors.Is(err, capability.ErrReplayExhausted) || errors.Is(err, capability.ErrReplayConflict) ||
+			errors.Is(err, capability.ErrCapacity) {
 			t.Fatal("unknown outcome classification changed")
 		}
 		if errors.Is(err, diagnostic) || errors.Is(err, cause) || err.Error() != capability.ErrConsumptionUnknown.Error() {

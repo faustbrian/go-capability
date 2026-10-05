@@ -72,11 +72,12 @@ func (grant Grant) Consume(ctx context.Context, store ConsumptionStore) (Consump
 			policies = append(policies, policy)
 		}
 	}
-	if len(policies) == 1 {
+	switch len(policies) {
+	case 0:
+		return ConsumptionResult{}, redact(ErrConsumptionUnknown, err)
+	case 1:
 		return ConsumptionResult{}, redact(policies[0], err)
-	}
-	if len(policies) > 1 {
+	default:
 		return ConsumptionResult{}, redact(errors.Join(policies...), err)
 	}
-	return ConsumptionResult{}, redact(ErrConsumptionUnknown, err)
 }
