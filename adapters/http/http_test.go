@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -151,3 +152,39 @@ func TestSuccessorPreservesHTTPCompatibility(t *testing.T) {
 type fixedClock struct{ now time.Time }
 
 func (clock fixedClock) Now() time.Time { return clock.now }
+
+// HTTP-ADMISSION: trusted configuration rejects control characters without
+// rejecting printable boundary characters or valid multibyte identities.
+func TestBothHTTPPathsValidateIssuerCharacters(t *testing.T) {
+	limits := capability.DefaultLimits()
+	resolver := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
+		t.Fatal("constructor attempted key resolution")
+		return capability.ResolvedKey{}, capability.ErrUnauthorized
+	})
+	profile := capability.URLProfile{Name: "ordinary-profile", SignatureParameter: "cap", AllowRelative: true}
+	for _, test := range []struct {
+		name, issuer string
+		valid        bool
+	}{
+		{"control", "issuer\x1f", false}, {"nul", "issuer\x00", false},
+		{"delete", "issuer\x7f", false}, {"space", "issuer ", true},
+		{"tilde", "issuer~", true}, {"utf8-limit", strings.Repeat("é", limits.MaxFieldBytes/2), true},
+		{"over-limit", strings.Repeat("a", limits.MaxFieldBytes+1), false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			canonical, canonicalErr := capabilityhttp.NewVerifier(capabilityhttp.VerifierOptions{
+				Issuer: test.issuer, Profile: profile, Resolver: resolver, Clock: fixedClock{}, Limits: limits,
+			})
+			compatibility, compatibilityErr := legacy.NewVerifier(legacy.VerifierOptions{
+				Issuer: test.issuer, Profile: profile, Resolver: resolver, Clock: fixedClock{}, Limits: limits,
+			})
+			if test.valid {
+				if canonicalErr != nil || compatibilityErr != nil || canonical == nil || compatibility == nil {
+					t.Fatal("valid printable issuer configuration rejected")
+				}
+			} else if canonical != nil || compatibility != nil || !errors.Is(canonicalErr, capability.ErrInvalidConfiguration) || !errors.Is(compatibilityErr, capability.ErrInvalidConfiguration) {
+				t.Fatal("invalid issuer produced a usable verifier")
+			}
+		})
+	}
+}

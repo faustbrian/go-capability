@@ -502,6 +502,7 @@ type stubSQLState struct {
 	queryErr    error
 	execRows    int64
 	execErr     error
+	execFailAt  int
 	rowsErr     error
 	beginErr    error
 	commitErr   error
@@ -553,7 +554,7 @@ func (connection *stubSQLConnection) ExecContext(_ context.Context, query string
 	connection.state.mu.Lock()
 	defer connection.state.mu.Unlock()
 	connection.state.executions = append(connection.state.executions, stubSQLExecution{query: query, arguments: append([]driver.NamedValue(nil), arguments...)})
-	if connection.state.execErr != nil {
+	if connection.state.execErr != nil && (connection.state.execFailAt == 0 || len(connection.state.executions) == connection.state.execFailAt) {
 		return nil, connection.state.execErr
 	}
 	return stubSQLResult{rows: connection.state.execRows, err: connection.state.rowsErr}, nil
