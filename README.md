@@ -5,7 +5,7 @@
 [![Coverage](https://img.shields.io/badge/coverage-100%25_required-blue)](CONTRIBUTING.md#verification)
 [![Mutation](https://img.shields.io/badge/mutation-100%25_required-blue)](CONTRIBUTING.md#verification)
 [![Documentation](https://img.shields.io/badge/docs-checked_in_CI-blue)](docs/)
-[![Go Reference](https://pkg.go.dev/badge/github.com/faustbrian/go-capability.svg)](https://pkg.go.dev/github.com/faustbrian/go-capability)
+[![Go Reference](https://pkg.go.dev/badge/github.com/faustbrian/go-capability/v2.svg)](https://pkg.go.dev/github.com/faustbrian/go-capability/v2)
 [![Release](https://img.shields.io/github/v/release/faustbrian/go-capability?sort=semver)](https://github.com/faustbrian/go-capability/releases)
 [![Go](https://img.shields.io/badge/go-1.27.0-00ADD8?logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -20,15 +20,22 @@ a JWT or PASETO replacement, payload encryption, DRM, or legal
 non-repudiation. Applications remain responsible for authenticating callers
 and authorizing each attempted use of a verified grant.
 
-Current main declares `github.com/faustbrian/go-capability/v2`; the examples
-below describe this unreleased v2 source and its explicit issuer configuration,
-issuer-scoped replay and finite memory admission, not the published v1 API.
-The v1 install command below selects the existing published API, whose issuer
-option fields differ from these examples. This source migration does not
-publish or claim a resolvable v2 tag. See the
+Version 2 uses `github.com/faustbrian/go-capability/v2`. The examples below
+use its explicit issuer configuration, issuer-scoped replay and finite memory
+admission. Published v1 remains available at the unversioned module path; its
+issuer option fields differ from these examples. See the
 [major adoption guidance](docs/adoption.md#explicit-issuer-policy-next-major).
 
-## Install (published v1)
+## Install
+
+Install v2.0.0 once it appears in
+[Releases](https://github.com/faustbrian/go-capability/releases):
+
+```sh
+go get github.com/faustbrian/go-capability/v2@v2.0.0
+```
+
+Existing v1 consumers can retain their published API until deliberate adoption:
 
 ```sh
 go get github.com/faustbrian/go-capability@v1
@@ -36,7 +43,7 @@ go get github.com/faustbrian/go-capability@v1
 
 The core module has no non-standard-library runtime dependencies.
 
-In the v2 source, use `github.com/faustbrian/go-capability/v2/adapters/http` for
+In v2, use `github.com/faustbrian/go-capability/v2/adapters/http` for
 `net/http` integration and `github.com/faustbrian/go-capability/v2/adapters/memory`
 for process-local replay and revocation state. The `v2/caphttp` and `v2/memory`
 facades remain alongside the canonical adapters; existing published v1 paths

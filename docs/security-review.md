@@ -359,7 +359,7 @@ source and environment rather than to this inventory.
 
 Revision 4 adds [ordinary authenticated replay tests](../replay_identity_test.go),
 PostgreSQL's existing in-memory transaction seam and SQL-driver parameter tests,
-and Valkey's ordinary Evaler seam. The PostgreSQL regression separately covers
+and Valkey's ordinary caller-owned script seam. The PostgreSQL regression separately covers
 a retained exhausted expired row and absent/cleaned state for the same normally
 issued grant accepted within verification skew; neither may regain quota.
 Future-expiry renewal is a separate oracle. These are source-boundary results,

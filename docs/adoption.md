@@ -19,10 +19,10 @@
 
 ### Module and import paths (v2 source)
 
-Current main declares `github.com/faustbrian/go-capability/v2` at the repository
+Version 2 declares `github.com/faustbrian/go-capability/v2` at the repository
 root, targeting Go 1.27. There are no version-specific source directories or
-branches. A future stable v2 release uses a root `v2.x.y` Git tag; this source
-change does not publish that tag or prove public module resolution.
+branches. Stable v2 releases use root `v2.x.y` Git tags. Declaring the module
+path alone does not establish public module resolution.
 
 Change the integrating module's required major version and all seven package
 imports together:
@@ -51,9 +51,9 @@ fresh public consumer without replacements or workspace assistance.
 
 ### Explicit issuer policy (next major)
 
-Current main intentionally rejects the formerly valid omitted-issuer verification
-and authorization behavior. This requires a new major release and consumer
-adoption; it is not a compatible patch or a claim that such a release exists.
+Version 2 intentionally rejects the formerly valid omitted-issuer verification
+and authorization behavior. This major requires deliberate consumer adoption;
+it is not a compatible v1 patch.
 Select `VerifyOptions.Issuer` and either HTTP path's `VerifierOptions.Issuer`
 from trusted application configuration, not the token or request. Configure
 each `Key.Issuer` or custom resolver's `ResolvedKey.Issuer` as the key's actual
@@ -85,7 +85,7 @@ migrated ledger. Table locks alone do not establish this operational fence.
 For PostgreSQL, retain migration `001_capability_consumptions.sql`. Apply it for
 a fresh database, then run `postgres.MigrateLegacyConsumption(ctx, tx, owner)`
 in a caller-owned transaction before using the new store. This is schema version
-2: it exclusively locks the table, parameterizes the explicit owner backfill,
+2: it exclusively locks the table, binds the explicit owner as a SQL parameter,
 preserves `uses`, `max_uses` and `expires_at`, and replaces the ID-only primary
 key with `(issuer, capability_id)`. The function neither commits nor rolls back.
 Roll back on failure and commit before activating new writers; do not rerun it

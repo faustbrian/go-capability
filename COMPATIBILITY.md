@@ -4,9 +4,8 @@ Each releasable directory is an independent Go module and follows semantic
 versioning. Nested-module tags use `<module-directory>/v<version>`; this root
 module uses root tags such as `v2.x.y`.
 
-Current main prepares `github.com/faustbrian/go-capability/v2`; it does not
-claim a published v2 release. All seven public package paths use the `/v2`
-module suffix, including the retained facades. The token wire remains v1.
+Version 2 uses `github.com/faustbrian/go-capability/v2`. All seven public
+package paths use the `/v2` module suffix, including the retained facades. The token wire remains v1.
 The [v2 API snapshot](api/README.md) establishes a new source baseline, not
 compatibility with the unversioned v1 module. Explicit issuer policy,
 issuer-scoped replay/migration, finite defaults and sanitized policy errors
