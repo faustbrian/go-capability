@@ -12,6 +12,11 @@ the module follows semantic versioning.
 - Refresh the shared CI workflow while retaining the v2 public API, runtime
   dependencies, and configured tooling.
 
+### Fixed
+
+- Use the patched TOML parser in Cspell's development dependency graph to
+  prevent quadratic parsing of untrusted TOML tooling configuration.
+
 ## [2.0.0] - 2026-10-05
 
 ### Fixed
