@@ -5,6 +5,13 @@ the module follows semantic versioning.
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-10-07
+
+### Changed
+
+- Refresh the shared CI workflow while retaining the v2 public API, runtime
+  dependencies, and configured tooling.
+
 ## [2.0.0] - 2026-10-05
 
 ### Fixed
@@ -210,7 +217,8 @@ the module follows semantic versioning.
 - Durable replay integration now proves acknowledged consumption survives an
   abrupt caller-process exit in both PostgreSQL and Valkey deployments.
 
-[Unreleased]: https://github.com/faustbrian/go-capability/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/faustbrian/go-capability/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/faustbrian/go-capability/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/faustbrian/go-capability/compare/v1.1.1...v2.0.0
 [1.1.0]: https://github.com/faustbrian/go-capability/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/faustbrian/go-capability/releases/tag/v1.0.0
