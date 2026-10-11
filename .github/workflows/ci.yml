@@ -20,21 +20,94 @@ permissions:
 
 jobs:
   ci:
-    uses: faustbrian/go-library-tools/.github/workflows/library-ci.yml@c7f232472d9c4c5ac5359d70bbef3b8f1571b834 # reviewed security maintenance source
+    uses: faustbrian/go-library-tools/.github/workflows/library-ci.yml@eff8b2127c361ee2f422123824a1d337cc277ac4 # qualified public v2.1.1 source
     with:
-      tooling_sha: c7f232472d9c4c5ac5359d70bbef3b8f1571b834
-      source_bootstrap: true
+      tooling_sha: eff8b2127c361ee2f422123824a1d337cc277ac4
+      source_bootstrap: false
       public_dependencies: true
       release_dry_run: ${{ inputs.release_dry_run || false }}
+
+  protocol:
+    name: Protocol guard
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GOENV: 'off'
+      GOWORK: 'off'
+      GOTOOLCHAIN: local
+      GOMAXPROCS: '2'
+      GOFLAGS: -p=1
+      GOPROXY: https://proxy.golang.org
+      GOSUMDB: sum.golang.org
+      GOPRIVATE: ''
+      GONOPROXY: ''
+      GONOSUMDB: ''
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.27.2
+          cache: false
+      - name: Prepare private protocol workspace
+        run: |
+          set -euo pipefail
+          task="$(mktemp -d "${RUNNER_TEMP}/capability-protocol-boundary.XXXXXX")"
+          {
+            echo "PROTOCOL_TASK=${task}"
+            echo "GOCACHE=${task}/cache"
+            echo "GOMODCACHE=${task}/mod"
+            echo "GOTMPDIR=${task}/tmp"
+            echo "TMPDIR=${task}/tmp"
+          } >>"${GITHUB_ENV}"
+          mkdir -p "${task}/cache" "${task}/mod" "${task}/tmp"
+      - name: Verify protocol and interoperability boundaries
+        run: |
+          set -euo pipefail
+          case "${PROTOCOL_TASK}" in
+            "${RUNNER_TEMP}"/capability-protocol-boundary.*) ;;
+            *) echo 'unexpected protocol workspace' >&2; exit 1 ;;
+          esac
+          cleanup() {
+            status=$?
+            if [[ -d "${PROTOCOL_TASK}" ]]; then
+              chmod -R u+w "${PROTOCOL_TASK}" || status=1
+              find "${PROTOCOL_TASK}" -depth -delete || status=1
+            fi
+            test ! -e "${PROTOCOL_TASK}" || status=1
+            exit "${status}"
+          }
+          trap cleanup EXIT
+          ./scripts/check-conformance.sh
+      - name: Remove private protocol workspace
+        if: always()
+        run: |
+          set -euo pipefail
+          if [[ -z "${PROTOCOL_TASK:-}" ]]; then
+            exit 0
+          fi
+          case "${PROTOCOL_TASK}" in
+            "${RUNNER_TEMP}"/capability-protocol-boundary.*) ;;
+            *) echo 'unexpected protocol workspace' >&2; exit 1 ;;
+          esac
+          if [[ -d "${PROTOCOL_TASK}" ]]; then
+            chmod -R u+w "${PROTOCOL_TASK}"
+            find "${PROTOCOL_TASK}" -depth -delete
+          fi
+          test ! -e "${PROTOCOL_TASK}"
 
   required:
     name: Required
     if: always()
-    needs: ci
+    needs: [ci, protocol]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Require shared workflow
         env:
           CI_RESULT: ${{ needs.ci.result }}
-        run: test "${CI_RESULT}" = success
+          PROTOCOL_RESULT: ${{ needs.protocol.result }}
+        run: test "${CI_RESULT}" = success && test "${PROTOCOL_RESULT}" = success
