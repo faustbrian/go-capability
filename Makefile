@@ -4,16 +4,16 @@ GOLIB ?= golib
 
 include verification/package.mk
 
-.PHONY: check check-full ci cohesion inventory repository-check specification-check specification-check-online
+.PHONY: source-docs-check check check-full ci cohesion inventory repository-check specification-check specification-check-online
 
-check:
+check: source-docs-check
 	$(GOLIB) check --local --all
 	$(MAKE) conformance
 
-check-full:
+check-full: source-docs-check
 	$(GOLIB) check --all
 
-ci:
+ci: source-docs-check
 	$(GOLIB) repository check
 	$(GOLIB) cohesion check
 	$(GOLIB) check --local --all
@@ -30,3 +30,6 @@ cohesion:
 
 inventory repository-check:
 	$(GOLIB) repository check
+
+source-docs-check:
+	$(GOLIB) source-docs check
