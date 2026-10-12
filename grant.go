@@ -2,20 +2,34 @@ package capability
 
 // Grant is authenticated capability authority. Its contents are copied so
 // caller mutation cannot widen a previously verified grant.
+// Zero Grant cannot authorize or consume. Value copies support concurrent reads
+// with immutable Use inputs; they do not recheck time, revocation or key policy.
+// Reverify before later effects as application policy requires.
 type Grant struct {
 	payload Payload
 	header  Header
 }
 
 // Use describes one concrete application operation to authorize.
+// Use fields must come from trusted application context rather than echoed token
+// claims. Subject must be independently authenticated; Caveats stays borrowed
+// during Authorize.
 type Use struct {
-	Issuer    string
-	Audience  string
-	Subject   string
-	Resource  string
+	// Issuer must match the application-selected nonempty issuer exactly.
+	Issuer string
+	// Audience must equal one authenticated audience.
+	Audience string
+	// Subject must match subject-bound grants; bearer grants do not check it.
+	Subject string
+	// Resource must equal authenticated resource bytes exactly.
+	Resource string
+	// Operation must equal authenticated operation bytes exactly.
 	Operation string
-	Tenant    string
-	Caveats   map[string]string
+	// Tenant must equal authenticated tenant, including empty.
+	Tenant string
+	// Caveats is borrowed attempted-use data; every encoded caveat must match, extras are
+	// ignored.
+	Caveats map[string]string
 }
 
 // Payload returns a defensive copy of the authenticated payload.
@@ -26,7 +40,10 @@ func (grant Grant) Payload() Payload {
 // Header returns the authenticated key and algorithm metadata.
 func (grant Grant) Header() Header { return grant.header }
 
-// Authorize checks exact encoded authority separately from parsing and signature verification.
+// Authorize compares exact required authority under DEC-005. Any mismatch
+// returns ErrUnauthorized; extra use caveats are ignored and bearer grants do
+// not check subject. No clock, consumption, revocation or protected business
+// operation runs here.
 func (grant Grant) Authorize(use Use) error {
 	if use.Issuer == "" || grant.payload.Issuer != use.Issuer ||
 		!contains(grant.payload.Audiences, use.Audience) ||

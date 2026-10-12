@@ -491,6 +491,9 @@ func openStubDatabase(t *testing.T, state *stubSQLState) *sql.DB {
 	return database
 }
 
+// stubSQLState records parameter binding and injected database/sql failures.
+// It is not a PostgreSQL parser, lock/isolation model or persistence proof;
+// openStubDatabase owns registered test-driver instances and closes each DB.
 type stubSQLState struct {
 	query       string
 	queryArgs   []driver.NamedValue
@@ -613,6 +616,9 @@ type fakeRecord struct {
 	expired   bool
 }
 
+// fakeBackend serializes test transactions with one process mutex. Writes
+// mutate its map immediately; Rollback only releases the lock, so this model
+// cannot prove SQL rollback/durability. Tagged fixtures own those real-service cases.
 type fakeBackend struct {
 	mu              sync.Mutex
 	records         map[[2]string]fakeRecord

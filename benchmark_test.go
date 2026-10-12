@@ -10,6 +10,8 @@ import (
 	"github.com/faustbrian/go-capability/v2/adapters/memory"
 )
 
+// BenchmarkIssueHMACSHA256 measures canonical payload/header encoding and
+// deterministic signing of validPayload; key construction is outside timing.
 func BenchmarkIssueHMACSHA256(b *testing.B) {
 	signer, _ := capability.NewHMACSHA256Signer(
 		"benchmark-key", []byte("0123456789abcdef0123456789abcdef"),
@@ -21,6 +23,8 @@ func BenchmarkIssueHMACSHA256(b *testing.B) {
 	}
 }
 
+// BenchmarkVerifyHMACSHA256 excludes issuance/key setup and verifies one fixed
+// token with an in-process resolver, fixed time and no revocation/consumption.
 func BenchmarkVerifyHMACSHA256(b *testing.B) {
 	token, verifier := hmacFixture(b)
 	resolver := capability.ResolverFunc(func(context.Context, string, capability.Algorithm) (capability.ResolvedKey, error) {
@@ -33,6 +37,8 @@ func BenchmarkVerifyHMACSHA256(b *testing.B) {
 	}
 }
 
+// BenchmarkSignURLHMACSHA256 measures GET signing of one absolute download URL
+// with one query field; signer/profile/payload setup is excluded.
 func BenchmarkSignURLHMACSHA256(b *testing.B) {
 	signer, _ := capability.NewHMACSHA256Signer(
 		"benchmark-key", []byte("0123456789abcdef0123456789abcdef"),
@@ -48,6 +54,8 @@ func BenchmarkSignURLHMACSHA256(b *testing.B) {
 	}
 }
 
+// BenchmarkVerifyURLHMACSHA256 excludes signing/key setup and verifies a fixed
+// canonical GET URL with a local resolver, no body digest or external service.
 func BenchmarkVerifyURLHMACSHA256(b *testing.B) {
 	signer, _ := capability.NewHMACSHA256Signer(
 		"benchmark-key", []byte("0123456789abcdef0123456789abcdef"),
@@ -72,6 +80,9 @@ func BenchmarkVerifyURLHMACSHA256(b *testing.B) {
 	}
 }
 
+// BenchmarkMemoryConsume repeatedly increments one live tuple under one lock;
+// clock/store setup is excluded. First admission differs from hot repeats and
+// eventual exhaustion; this is not durable-store throughput or contention proof.
 func BenchmarkMemoryConsume(b *testing.B) {
 	clock := benchmarkClock{now: testNow}
 	store, _ := capabilitymemory.NewConsumptionStore(clock)
@@ -82,6 +93,8 @@ func BenchmarkMemoryConsume(b *testing.B) {
 	}
 }
 
+// BenchmarkMemoryRevocationCheck measures negative reads of an empty set with
+// one fixed query. Construction is excluded; it does not measure populated hits.
 func BenchmarkMemoryRevocationCheck(b *testing.B) {
 	store := capabilitymemory.NewRevocations()
 	query := capability.RevocationQuery{Issuer: "issuer", CapabilityID: "capability", IssuedAt: testNow}
@@ -91,6 +104,8 @@ func BenchmarkMemoryRevocationCheck(b *testing.B) {
 	}
 }
 
+// BenchmarkMemoryRevokeCapability measures repeated identical writes after
+// initial admission, not unique-key capacity growth. Store setup is excluded.
 func BenchmarkMemoryRevokeCapability(b *testing.B) {
 	store := capabilitymemory.NewRevocations()
 	b.ReportAllocs()

@@ -63,6 +63,8 @@ func TestValkeyConsumptionSurvivesClientRecreation(t *testing.T) {
 	}
 }
 
+// Child exit bypasses graceful client close after consumption; parent joins
+// the bounded subprocess and deletes its unique mapped legacy key.
 func TestValkeyConsumptionSurvivesCallerProcessExit(t *testing.T) {
 	address := os.Getenv("VALKEY_ADDR")
 	if address == "" {

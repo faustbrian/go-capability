@@ -23,5 +23,7 @@
 
 ## Contributing
 
+- [Source documentation audit](source-documentation.md)
+
 - [Contribution guide](../CONTRIBUTING.md)
 - [Release history](../CHANGELOG.md)

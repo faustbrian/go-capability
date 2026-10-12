@@ -68,6 +68,9 @@ func (failure *safeError) Unwrap() []error {
 	return []error{failure.kind, failure.classification}
 }
 
+// Keep stable context/policy classifications but discard collaborator graphs
+// and text. Direct store calls remain diagnostic owners; core boundaries protect
+// TestOperationalErrorsPreserveClassificationWithoutExposingDiagnostics.
 func redact(kind, cause error) error {
 	switch {
 	case errors.Is(cause, context.Canceled):

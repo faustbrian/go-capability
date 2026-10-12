@@ -5,6 +5,13 @@ the module follows semantic versioning.
 
 ## [Unreleased]
 
+### Documentation
+
+- Clarify explicit issuer/key trust, borrowed collaborators, parsing versus
+  authorization/consumption, store-clock precision and unknown outcomes.
+- Document HTTP pre-authentication body work, process-local admission/lifecycle,
+  durable owner/migration boundaries and synthetic test/benchmark limitations.
+
 ## [2.0.1] - 2026-10-07
 
 ### Changed

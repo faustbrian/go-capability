@@ -10,17 +10,28 @@ import (
 // immutable expiry and maximum-use bound. Issuer is required; stores must not
 // merge different issuer namespaces even when their capability IDs match.
 type Consumption struct {
-	Issuer       string
+	// Issuer is required authenticated namespace; never merge equal IDs across issuers.
+	Issuer string
+	// CapabilityID is required exact signed identity, not an application transaction ID.
 	CapabilityID string
-	ExpiresAt    time.Time
-	MaxUses      uint32
+	// ExpiresAt is signed expiry bound; each store applies its own clock and supported
+	// precision.
+	ExpiresAt time.Time
+	// MaxUses must be positive for direct store calls and remains immutable for live
+	// identity.
+	MaxUses uint32
 }
 
 // ConsumptionResult is the committed use ordinal and remaining allowance.
 type ConsumptionResult struct {
-	Use       uint32
+	// Use is the one-based committed ordinal for bounded uses; zero for reusable grants.
+	Use uint32
+	// Remaining is the allowance after this committed use, not a reservation for future
+	// operations.
 	Remaining uint32
-	Reusable  bool
+	// Reusable is true only for the core unbounded-use shortcut; Use/Remaining are then
+	// zero.
+	Reusable bool
 }
 
 // ConsumptionStore atomically increments a capability only when its committed
@@ -30,6 +41,9 @@ type ConsumptionResult struct {
 // Any non-policy error may represent an
 // unknown commit outcome and callers must fail closed rather than retry blindly.
 type ConsumptionStore interface {
+	// Consume atomically compares exact issuer/ID, live expiry/max and count before
+	// increment. Honor ctx; document server clock/precision, retention and unknown
+	// commit windows.
 	Consume(context.Context, Consumption) (ConsumptionResult, error)
 }
 
@@ -41,9 +55,13 @@ func (function ConsumptionStoreFunc) Consume(ctx context.Context, consumption Co
 	return function(ctx, consumption)
 }
 
-// Consume atomically records one bounded use. Reusable grants do not require a store.
-// Store errors retain only replay-policy, capacity, and safe context classifications, not
-// the store's diagnostic text or arbitrary causes.
+// Consume forwards authenticated issuer/ID/expiry/max for one atomic bounded
+// use; reusable grants need no store. Non-nil ctx and verified grant are
+// required. It performs no Authorize, clock or revocation recheck, and trusts
+// successful custom results. Store errors retain only no-consume
+// policy/capacity/context categories or ErrConsumptionUnknown, not arbitrary
+// graphs/text. Callbacks/typed nil remain trusted; business effects are not
+// coupled (DEC-008).
 func (grant Grant) Consume(ctx context.Context, store ConsumptionStore) (ConsumptionResult, error) {
 	if err := contextError(ctx); err != nil {
 		return ConsumptionResult{}, err

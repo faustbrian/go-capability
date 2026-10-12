@@ -1,6 +1,16 @@
-// Package capability issues and verifies narrowly scoped, tamper-evident grants.
-// Verification authenticates encoded authority; applications must separately
-// authorize each attempted use against the returned Grant.
+// Package capability issues and verifies local cap1/v1 grants. Start with
+// DefaultLimits, an explicit signer and issuer-owned NewKeySet. Parsing, Verify,
+// Grant.Authorize and Grant.Consume are separate trust boundaries: verification
+// alone does not authorize business effects or consume a use.
+//
+// Core code owns no network, database, worker or clock lifecycle and adds no cgo.
+// Optional HTTP/memory/PostgreSQL/Valkey packages compose caller-owned resources.
+// Tokens encode visible bearer authority, not encryption, JWT/JWS or RFC 9421.
+// Local policies and pinned standards are in docs/specification-decisions.md.
+//
+// Constructors copy secrets without secure erasure. Maps/slices and callbacks
+// stay borrowed during calls: use safe immutable collaborators and bounded
+// context-aware I/O. Cancellation cannot forcibly preempt synchronous callbacks.
 package capability
 
 import (
@@ -16,15 +26,29 @@ import (
 
 const payloadVersion = 1
 
-// Limits bounds every attacker-controlled token and payload collection.
+// Limits defines explicit payload/token admission. Zero is invalid; start with
+// DefaultLimits. CanonicalPayload copies collections before validation, and URL
+// profile counts remain caller-owned. Finite defaults are not an exact heap
+// quota; very large custom limits require allocation/arithmetic review.
 type Limits struct {
-	MaxTokenBytes  int
-	MaxFieldBytes  int
-	MaxAudiences   int
-	MaxCaveats     int
+	// MaxTokenBytes caps encoded payload input/output and complete token bytes; positive,
+	// not an exact heap quota.
+	MaxTokenBytes int
+	// MaxFieldBytes caps bounded text fields; positive. Protected key IDs retain a separate
+	// 256-byte ceiling.
+	MaxFieldBytes int
+	// MaxAudiences is the positive maximum audience count.
+	MaxAudiences int
+	// MaxCaveats is the maximum caveat count; zero permits none, negative is invalid.
+	MaxCaveats int
+	// MaxCaveatBytes is the positive byte limit for each caveat value.
 	MaxCaveatBytes int
-	MaxLifetime    time.Duration
-	MaxUses        uint32
+	// MaxLifetime is positive; expiry minus the earlier issued/not-before second must fit
+	// its whole seconds.
+	MaxLifetime time.Duration
+	// MaxUses is the positive ceiling on signed bounded use counts; payload zero still
+	// means reusable.
+	MaxUses uint32
 }
 
 // DefaultLimits returns the reviewed v1 resource limits.
@@ -39,22 +63,48 @@ func DefaultLimits() Limits {
 // Payload is the authority encoded by a v1 capability. Subject and Bearer are
 // mutually exclusive. MaxUses zero means reusable; a positive value is an
 // upper bound enforced by a replay store, not by signature verification alone.
+// Zero is invalid. Collections are borrowed during calls and must not be
+// concurrently mutated; times encode UTC Unix seconds, discarding fractions.
 type Payload struct {
-	Version       int
-	Issuer        string
-	Audiences     []string
-	Subject       string
-	Bearer        bool
-	Resource      string
-	Operation     string
-	IssuedAt      time.Time
-	NotBefore     time.Time
-	ExpiresAt     time.Time
-	ID            string
-	Tenant        string
+	// Version must be local wire version 1, independent of the Go module major.
+	Version int
+	// Issuer is required exact issuer text; verification separately binds trusted key
+	// ownership.
+	Issuer string
+	// Audiences is required borrowed text; canonicalization copies/sorts it and rejects
+	// duplicate values.
+	Audiences []string
+	// Subject is the exact independently authenticated subject; it is mutually exclusive
+	// with Bearer.
+	Subject string
+	// Bearer permits use without subject matching and requires an empty Subject; tokens
+	// remain transferable.
+	Bearer bool
+	// Resource is required exact application authority; SignURL owns it instead.
+	Resource string
+	// Operation is required exact application operation; SignURL substitutes its HTTP
+	// method.
+	Operation string
+	// IssuedAt encodes nonnegative Unix seconds; subsecond precision is discarded.
+	IssuedAt time.Time
+	// NotBefore encodes nonnegative Unix seconds; it may precede IssuedAt, but expiry must
+	// follow both.
+	NotBefore time.Time
+	// ExpiresAt is exclusive signed Unix-second expiry; Verify applies caller skew
+	// separately.
+	ExpiresAt time.Time
+	// ID is required public capability identity; callers generate collision-resistant
+	// values per issuer.
+	ID string
+	// Tenant is exact optional authority; empty is an explicit empty boundary.
+	Tenant string
+	// CorrelationID is optional diagnostic attribution, never authorization.
 	CorrelationID string
-	MaxUses       uint32
-	Caveats       map[string]string
+	// MaxUses zero is reusable; positive requires explicit atomic consumption, not just
+	// verification.
+	MaxUses uint32
+	// Caveats is an optional borrowed map of exact required pairs; Use may supply extras.
+	Caveats map[string]string
 }
 
 type payloadWire struct {
@@ -75,9 +125,11 @@ type payloadWire struct {
 	Caveats       map[string]string `json:"caveats,omitempty"`
 }
 
-// CanonicalPayload validates payload and returns its unique UTF-8 JSON encoding.
-// Strings are preserved byte-for-byte: canonically equivalent Unicode forms
-// remain distinct authority strings and are never normalized implicitly.
+// CanonicalPayload returns owned local fixed-order JSON under DEC-003. It
+// copies/sorts audiences and maps before admission, rejecting duplicate
+// audiences and invalid text/time/bounds. Unicode bytes are not normalized;
+// equivalent Unicode spellings remain different authority. This is not RFC 8785
+// canonicalization or authentication.
 func CanonicalPayload(payload Payload, limits Limits) ([]byte, error) {
 	if err := validateLimits(limits); err != nil {
 		return nil, err
@@ -97,7 +149,10 @@ func CanonicalPayload(payload Payload, limits Limits) ([]byte, error) {
 	return encoded, nil
 }
 
-// ParsePayload accepts only the exact canonical v1 byte representation.
+// ParsePayload bounds input before decoding and accepts only exact local
+// canonical JSON. Re-encoding rejects alternate order, duplicates, whitespace
+// and trailing data. Returned slices/maps are owned; refusal returns zero
+// Payload. It authenticates nothing (DEC-003).
 func ParsePayload(encoded []byte, limits Limits) (Payload, error) {
 	if err := validateLimits(limits); err != nil {
 		return Payload{}, err

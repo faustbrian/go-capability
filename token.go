@@ -16,16 +16,27 @@ const tokenPrefix = "cap1"
 // Header is protected token metadata. Algorithm is authenticated but is also
 // checked against the trusted verifier returned by Resolver.
 type Header struct {
-	Version   int       `json:"v"`
-	Type      string    `json:"typ"`
+	// Version must be 1 for local cap1 framing.
+	Version int `json:"v"`
+	// Type must be capability, not a JWT/JWS media type.
+	Type string `json:"typ"`
+	// Algorithm is protected but cannot select a different trusted verifier construction.
 	Algorithm Algorithm `json:"alg"`
-	KeyID     string    `json:"kid"`
+	// KeyID is protected public key identity with a fixed 256-byte canonical-header
+	// ceiling.
+	KeyID string `json:"kid"`
 }
 
 // Parsed is a structurally valid canonical token. It is not authenticated and
 // grants no authority until passed to Verify.
+// Exported decoded fields remain untrusted and mutable; returned collections
+// belong to the caller. Verify reparses token text rather than trusting this
+// value.
 type Parsed struct {
-	Header  Header
+	// Header is decoded untrusted metadata, not trusted resolver policy.
+	Header Header
+	// Payload is decoded untrusted authority with caller-owned slices/maps; changing it
+	// does not verify anything.
 	Payload Payload
 
 	signingInput []byte
@@ -35,16 +46,26 @@ type Parsed struct {
 // ResolvedKey is trusted key-policy state returned by a Resolver.
 type ResolvedKey struct {
 	// Issuer is the trusted namespace owning this key, not a token-derived claim.
-	Issuer    string
-	Verifier  Verifier
-	Disabled  bool
-	Revoked   bool
+	Issuer string
+	// Verifier is mandatory borrowed trusted cryptographic code; typed nil is not detected.
+	Verifier Verifier
+	// Disabled refuses use without declaring the key revoked.
+	Disabled bool
+	// Revoked refuses all use and takes precedence over Disabled.
+	Revoked bool
+	// NotBefore is inclusive key activation at unskewed verification time; zero is open.
 	NotBefore time.Time
-	NotAfter  time.Time
+	// NotAfter is exclusive key expiry at unskewed verification time; zero is open.
+	NotAfter time.Time
 }
 
 // Resolver finds a trusted verifier and its current lifecycle policy.
+// Shared implementations must be concurrency-safe, bounded and context-aware.
+// No core worker, timeout, cache or panic boundary owns collaborator execution.
 type Resolver interface {
+	// Resolve supplies independently trusted issuer/key policy for exact global
+	// ID/algorithm; honor ctx and return safe ErrUnknownKey/ErrAlgorithmMismatch
+	// categories.
 	Resolve(context.Context, string, Algorithm) (ResolvedKey, error)
 }
 
@@ -60,14 +81,25 @@ func (function ResolverFunc) Resolve(ctx context.Context, keyID string, algorith
 type VerifyOptions struct {
 	// Issuer is selected by trusted application configuration. It is required
 	// and must match both the signed claim and the resolved key's owner.
-	Issuer      string
-	Now         time.Time
-	Skew        time.Duration
-	Limits      Limits
+	Issuer string
+	// Now is required trusted processing time; no clock is implicitly sampled.
+	Now time.Time
+	// Skew is nonnegative tolerance on payload validity, not key activation or store
+	// expiry.
+	Skew time.Duration
+	// Limits is explicit finite parser policy; zero is invalid.
+	Limits Limits
+	// Revocations is optional borrowed policy invoked after signature/time validation; nil
+	// disables that check.
 	Revocations RevocationChecker
 }
 
-// Issue validates and signs one canonical v1 payload.
+// Issue validates/signs local cap1/v1 under DEC-001–003 with non-nil ctx/signer.
+// Payload collections are copied, but signer methods remain trusted synchronous
+// code with stable key IDs no longer than 256 bytes. It generates no ID or
+// randomness. Signatures must be 1–512 bytes; output length is checked after
+// encoding. Signer errors retain only ErrSigningFailed and safe context
+// categories; panics/typed nil are not contained.
 func Issue(ctx context.Context, payload Payload, signer Signer, limits Limits) (string, error) {
 	if err := contextError(ctx); err != nil {
 		return "", err
@@ -98,8 +130,11 @@ func Issue(ctx context.Context, payload Payload, signer Signer, limits Limits) (
 	return token, nil
 }
 
-// Parse validates token framing and canonical protected fields without
-// authenticating them or authorizing resource use.
+// Parse bounds complete input before splitting/decoding and requires canonical
+// decoded header/payload JSON, without authenticating authority. Refusal returns
+// zero Parsed. Go Strict RawURLEncoding rejects padding/nonzero trailing bits
+// but permits CR/LF during decoding; this is not a separate unique-token-text
+// re-encoding check.
 func Parse(token string, limits Limits) (Parsed, error) {
 	if err := validateLimits(limits); err != nil {
 		return Parsed{}, err
@@ -151,8 +186,12 @@ func Parse(token string, limits Limits) (Parsed, error) {
 	}, nil
 }
 
-// Verify authenticates and validates a token. It does not authorize an
-// attempted resource operation; use Grant.Authorize for that separate step.
+// Verify reparses/authenticates the token, returning zero Grant on failure.
+// Trusted selected issuer must match claim and key owner before cryptography.
+// Key activation is inclusive/exclusive at unskewed Now; payload expiry is
+// exclusive with Skew. Revocation runs after crypto/time success. Errors strip
+// collaborator diagnostics; callbacks remain borrowed/cooperative. Authorize and
+// Consume remain explicit; no cache/worker is added (DEC-004/005/009/010).
 func Verify(ctx context.Context, token string, resolver Resolver, options VerifyOptions) (Grant, error) {
 	if err := contextError(ctx); err != nil {
 		return Grant{}, err

@@ -67,6 +67,8 @@ func TestPostgresConsumptionSurvivesClientRecreation(t *testing.T) {
 	}
 }
 
+// The child deliberately exits after a committed use without graceful cleanup.
+// Parent joins its bounded subprocess and removes the dedicated fixture table.
 func TestPostgresConsumptionSurvivesCallerProcessExit(t *testing.T) {
 	dsn := os.Getenv("POSTGRES_URL")
 	if dsn == "" {

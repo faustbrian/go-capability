@@ -18,25 +18,47 @@ const (
 
 // URLProfile fixes every URL component whose interpretation affects authority.
 // QueryParameters is an allowlist; duplicate parameters are always rejected.
+// Zero profile is invalid. Slices remain borrowed and immutable during
+// calls/verifier lifetime. Names version local DEC-006/007, not DNS/SSRF
+// admission, downstream authorization or provider interoperability.
 type URLProfile struct {
-	Name               string
+	// Name is required versioned local policy identity stored in a reserved caveat.
+	Name string
+	// SignatureParameter is required token query name and must not also be allowlisted.
 	SignatureParameter string
-	AllowRelative      bool
-	AllowedSchemes     []string
+	// AllowRelative permits path/query-only authority; the application must supply trusted
+	// origin context.
+	AllowRelative bool
+	// AllowedSchemes is borrowed sorted/unique http/https names; empty is allowed only for
+	// relative-only policy.
+	AllowedSchemes []string
+	// AllowedAuthorities is borrowed sorted/unique canonical lowercase ASCII authorities
+	// paired with schemes.
 	AllowedAuthorities []string
-	QueryParameters    []string
-	RequireBodyDigest  bool
+	// QueryParameters is borrowed sorted/unique allowed query names, excluding
+	// SignatureParameter.
+	QueryParameters []string
+	// RequireBodyDigest requires exactly 32 caller-supplied SHA-256 bytes covered through a
+	// reserved caveat.
+	RequireBodyDigest bool
 }
 
 // URLRequest contains the already selected external request representation.
 // BodyDigest, when required, is exactly a SHA-256 digest rather than body bytes.
 type URLRequest struct {
-	Method     string
-	RawURL     string
+	// Method is an exact nonempty uppercase HTTP token, not normalized.
+	Method string
+	// RawURL is borrowed URL text; verification requires canonical presentation, signing
+	// normalizes it.
+	RawURL string
+	// BodyDigest is borrowed precomputed SHA-256 data; omit it when the profile does not
+	// require a digest.
 	BodyDigest []byte
 }
 
-// Validate checks that a profile is deterministic and bounded under limits.
+// Validate checks local names, sorted unique allowlists and canonical
+// authorities under valid Limits. Refusal returns ErrInvalidConfiguration. It
+// adds no defensive copies, profile slice-count cap or I/O.
 func (profile URLProfile) Validate(limits Limits) error {
 	if err := validateLimits(limits); err != nil {
 		return err
@@ -44,9 +66,11 @@ func (profile URLProfile) Validate(limits Limits) error {
 	return validateURLProfile(profile, limits)
 }
 
-// SignURL binds a capability to a canonical URL and inserts the token in the
-// profile's signature parameter. Payload Resource and Operation must be empty
-// because this function owns those authority fields.
+// SignURL owns empty Payload.Resource/Operation, canonicalizes the request and
+// adds copied reserved profile/digest caveats, which must be absent. No caller
+// collection is mutated. The returned URL contains visible bearer credentials;
+// callers prevent disclosure. It generates no ID, reads no body and performs no
+// egress (DEC-006/007).
 func SignURL(
 	ctx context.Context,
 	payload Payload,
@@ -88,8 +112,11 @@ func SignURL(
 	return u.String(), nil
 }
 
-// VerifyURL authenticates the embedded capability and independently checks its
-// method, authority, path, query, profile, and optional body-digest binding.
+// VerifyURL authenticates the embedded capability and independently binds
+// canonical method/URL/profile/digest. Success removes reserved URL caveats from
+// its copied Grant; application dimensions still require Authorize and explicit
+// Consume. Refusal returns zero Grant. It neither reads bodies nor derives
+// trusted issuer/origin from forwarding headers.
 func VerifyURL(
 	ctx context.Context,
 	request URLRequest,
@@ -346,6 +373,9 @@ func canonicalPath(u *url.URL) (string, error) {
 	return path, nil
 }
 
+// Duplicate refusal avoids first/last-value parser differentials (DEC-006,
+// TestVerifyURLRejectsAmbiguitySmugglingAndDowngrade). Signed presentation also
+// must exactly match Go Values.Encode; no request is rewritten for acceptance.
 func parseUniqueQuery(raw string) (url.Values, error) {
 	values := make(url.Values)
 	if raw == "" {

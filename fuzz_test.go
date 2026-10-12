@@ -9,6 +9,9 @@ import (
 	"github.com/faustbrian/go-capability/v2"
 )
 
+// FuzzParseNeverAcceptsTwoPayloadRepresentations bounds raw JSON at default
+// token bytes plus one, then requires exact canonical re-encoding of acceptance.
+// It exercises parser representation, not authenticated authority.
 func FuzzParseNeverAcceptsTwoPayloadRepresentations(f *testing.F) {
 	canonical, err := capability.CanonicalPayload(validPayload(), capability.DefaultLimits())
 	if err != nil {
@@ -35,6 +38,9 @@ func FuzzParseNeverAcceptsTwoPayloadRepresentations(f *testing.F) {
 	})
 }
 
+// FuzzSignedURLRoundTripIsDeterministic bounds URL text at 4096 bytes and
+// verifies accepted signing/canonical-resource re-signing with fixed local HMAC
+// policy. It does not qualify a proxy, provider profile or real network.
 func FuzzSignedURLRoundTripIsDeterministic(f *testing.F) {
 	for _, seed := range []string{
 		"https://files.example/report/42?download=1",
@@ -87,6 +93,8 @@ func FuzzSignedURLRoundTripIsDeterministic(f *testing.F) {
 	})
 }
 
+// FuzzParseTokenIsBounded caps untrusted text at default token bytes plus one.
+// It checks parser robustness, not cryptographic acceptance or a heap benchmark.
 func FuzzParseTokenIsBounded(f *testing.F) {
 	token, _ := hmacFixtureForFuzz(f)
 	for _, seed := range []string{token, "", "cap1....", "cap1.e30.e30.c2ln", string([]byte{0xff})} {

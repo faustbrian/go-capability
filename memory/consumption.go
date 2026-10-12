@@ -1,5 +1,8 @@
 // Package memory is the compatibility facade for the target-oriented
-// process-local replay and revocation adapter.
+// process-local replay and revocation adapter. Start with explicit clocks and
+// NewConsumptionStore/NewRevocations. Canonical adapter locks own state, which
+// is lost on restart; callers own cleanup cutoffs, capacity and revocation errors.
+// No worker, persistent backend or close lifecycle is introduced.
 //
 // Deprecated: use github.com/faustbrian/go-capability/v2/adapters/memory. This
 // package remains supported through the documented compatibility interval.
@@ -15,11 +18,14 @@ import (
 
 // Clock supplies wall time for expiry decisions.
 type Clock interface {
+	// Now supplies trusted wall time concurrently and promptly; called by the
+	// canonical store outside its locks.
 	Now() time.Time
 }
 
 // ConsumptionStore preserves the released compatibility-path type identity
-// while delegating all behavior to the canonical adapter.
+// while delegating all behavior to the canonical adapter. Zero is unusable;
+// Consume/Cleanup share the canonical synchronization/clock/admission owner.
 type ConsumptionStore struct {
 	canonical *capabilitymemory.ConsumptionStore
 }
@@ -29,7 +35,9 @@ func NewConsumptionStore(clock Clock) (*ConsumptionStore, error) {
 	return NewConsumptionStoreWithLimits(clock, DefaultStoreLimits())
 }
 
-// NewConsumptionStoreWithLimits constructs a store with explicit positive budgets.
+// NewConsumptionStoreWithLimits copies positive budgets into the canonical
+// store but borrows Clock. Nil clock/invalid limits return nil and
+// ErrInvalidConfiguration; typed nil and blocking/panicking clocks are caller-owned.
 func NewConsumptionStoreWithLimits(clock Clock, limits StoreLimits) (*ConsumptionStore, error) {
 	store, err := capabilitymemory.NewConsumptionStoreWithLimits(clock, limits)
 	if err != nil {

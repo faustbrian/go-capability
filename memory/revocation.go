@@ -10,7 +10,9 @@ import (
 
 // Revocations preserves the released compatibility-path type identity while
 // delegating to the canonical finite adapter. Administrative writers must
-// handle ErrCapacity: a failed insertion does not revoke authority.
+// handle ErrCapacity: a failed insertion does not revoke authority. Zero is
+// unusable; canonical owner locks serialize methods, without expiry/removal
+// or distributed propagation. The wrapper owns no additional state or worker.
 type Revocations struct {
 	canonical *capabilitymemory.Revocations
 }

@@ -1,5 +1,10 @@
 // Package postgres provides durable atomic capability consumption through
-// database/sql and PostgreSQL row locks. The caller supplies the SQL driver.
+// database/sql and PostgreSQL row locks. Start with the explicit schema/legacy
+// ownership migration and NewConsumptionStore; the caller supplies/owns the
+// SQL driver, database, credentials and timeouts. Store calls own their replay
+// transactions, not a protected business transaction, worker or database close.
+// Read-committed row locking and a finite insert-race retry preserve DEC-008;
+// unknown commit outcomes require application reconciliation, not blind retries.
 package postgres
 
 import (
@@ -35,7 +40,9 @@ type transaction interface {
 	Rollback() error
 }
 
-// ConsumptionStore owns durable PostgreSQL transactions for replay state.
+// ConsumptionStore owns per-call replay transactions, not database lifetime.
+// Construct with NewConsumptionStore; zero is unusable. Concurrent use follows
+// database/sql and row locks, not a process mutex. No business effect is joined.
 type ConsumptionStore struct{ database beginner }
 
 // NewConsumptionStore binds store to db. The schema in migrations must be
@@ -53,7 +60,12 @@ func newStore(database beginner) *ConsumptionStore {
 }
 
 // Consume serializes one capability row, then commits an increment only when
-// the signed identity and use bound match. Commit errors have unknown outcome.
+// the signed issuer/ID, live expiry and maximum match. ctx must be non-nil;
+// issuer/ID are nonempty UTF-8 <=256 bytes. Expiry truncates to microseconds and
+// is checked against transaction time, not verifier skew or a post-lock clock.
+// Insert races retry at most three transactions; depletion/conflict commit no
+// use. Other driver/commit errors remain raw and may have unknown outcome.
+// Grant.Consume adds the safe normalization boundary; direct calls do not.
 func (store *ConsumptionStore) Consume(ctx context.Context, request capability.Consumption) (capability.ConsumptionResult, error) {
 	if err := validateRequest(ctx, request); err != nil {
 		return capability.ConsumptionResult{}, err
@@ -138,7 +150,10 @@ func (store *ConsumptionStore) consumeOnce(ctx context.Context, request capabili
 	return capability.ConsumptionResult{Use: uses, Remaining: request.MaxUses - uses}, false, nil
 }
 
-// Cleanup deletes state whose expiry is at or before cutoff.
+// Cleanup deletes state at/before nonzero cutoff in one owned transaction.
+// Call with non-nil ctx; caller chooses a safe cutoff beyond relevant acceptance
+// windows and supplies operational deadlines. Returned count is committed only
+// on nil error; commit failure returns zero with an unknown deletion outcome.
 func (store *ConsumptionStore) Cleanup(ctx context.Context, cutoff time.Time) (int64, error) {
 	if ctx == nil || cutoff.IsZero() {
 		return 0, capability.ErrInvalidConfiguration

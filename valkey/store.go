@@ -1,5 +1,9 @@
 // Package valkey provides atomic bounded-use consumption through one Valkey
-// EVAL operation. Client libraries adapt their result type to Evaler.
+// EVAL operation. Start with explicit owner-proven LegacyIssuer/KeyPrefix and
+// NewConsumptionStore. Client libraries adapt replies to Evaler; connection,
+// persistence/replication, deadline, recovery and close lifecycles remain caller
+// responsibilities. Concurrent calls require a safe client; no worker, cache
+// retry or cgo is introduced. The server clock and expiry key own DEC-008 state.
 package valkey
 
 import (
@@ -47,6 +51,8 @@ return {'consumed', '1', tostring(maximum - 1)}
 // normalizes the RESP array reply to strings. Implementations must preserve
 // context cancellation and must not retry writes after unknown outcomes.
 type Evaler interface {
+	// Eval atomically executes the exact script with all accessed keys declared,
+	// normalizing its reply. Honor ctx; never retry a write with unknown outcome.
 	Eval(context.Context, string, []string, ...string) ([]string, error)
 }
 
@@ -56,18 +62,27 @@ type Options struct {
 	// under KeyPrefix. It is required even for a new empty ledger. All old writers
 	// must be fenced before activation; unknown ownership requires retirement.
 	LegacyIssuer string
-	Client       Evaler
-	KeyPrefix    string
+	// Client is mandatory borrowed Evaler; callers own connections, deadlines and unknown-
+	// outcome recovery.
+	Client Evaler
+	// KeyPrefix is required printable ASCII, at most 64 bytes without braces; never change
+	// it on a live ledger.
+	KeyPrefix string
 }
 
-// ConsumptionStore atomically consumes bounded capabilities in Valkey.
+// ConsumptionStore borrows a client for one atomic EVAL per bounded use.
+// Construct with NewConsumptionStore; zero is unusable. Shared use depends on
+// client concurrency/cancellation and configured persistence, not local locking.
 type ConsumptionStore struct {
 	legacyIssuer string
 	client       Evaler
 	prefix       string
 }
 
-// NewConsumptionStore validates a client and fixed key prefix.
+// NewConsumptionStore validates explicit legacy owner/client/prefix and
+// returns nil/ErrInvalidConfiguration on refusal. It calls no backend, creates
+// no connection and detects nil interfaces but not typed nil. Mapping/prefix
+// stay fixed: changing them on a live ledger can recreate quotas.
 func NewConsumptionStore(options Options) (*ConsumptionStore, error) {
 	if options.Client == nil || !validPrefix(options.KeyPrefix) || options.LegacyIssuer == "" ||
 		len(options.LegacyIssuer) > 256 || !utf8.ValidString(options.LegacyIssuer) {
@@ -76,7 +91,13 @@ func NewConsumptionStore(options Options) (*ConsumptionStore, error) {
 	return &ConsumptionStore{client: options.Client, prefix: options.KeyPrefix, legacyIssuer: options.LegacyIssuer}, nil
 }
 
-// Consume executes one constant script against one declared, digest-derived key.
+// Consume executes one unchanged script against one declared digest-derived
+// key. Exact issuer/ID, positive maximum and expiry are required; identifier
+// UTF-8 is capped at 256 bytes. Expiry truncates to Unix milliseconds and server
+// TIME controls acceptance without verifier skew. Mapped legacy issuer retains
+// its old ID-only key; other issuers use length-framed tuples. Conflict/expiry/
+// exhaustion commit no use; malformed replies/client errors may follow a commit
+// and remain raw. Grant.Consume supplies unknown-outcome redaction, not a retry.
 func (store *ConsumptionStore) Consume(ctx context.Context, request capability.Consumption) (capability.ConsumptionResult, error) {
 	if err := validateRequest(ctx, request); err != nil {
 		return capability.ConsumptionResult{}, err

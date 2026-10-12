@@ -14,7 +14,8 @@ import (
 // The caller must fence and drain all old writers first and supply an open
 // transaction. This function locks the table but does not commit or roll back;
 // on failure the caller must roll back. Commit before activating new writers.
-// An already upgraded schema is not migrated again. Unknown legacy ownership
+// Repeating this on an upgraded schema fails rather than acting as a no-op.
+// Direct SQL errors remain caller-owned diagnostics. Unknown legacy ownership
 // requires retiring old grants beyond expiry plus verification skew instead.
 func MigrateLegacyConsumption(ctx context.Context, tx *sql.Tx, legacyIssuer string) error {
 	if ctx == nil || tx == nil || legacyIssuer == "" || len(legacyIssuer) > 256 || !utf8.ValidString(legacyIssuer) {

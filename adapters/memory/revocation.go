@@ -16,7 +16,9 @@ type resourceValue struct{ issuer, tenant, resource string }
 // five maps share one admission budget and never evict entries. Trusted
 // administrative callers must handle ErrCapacity from every writer: a failed
 // insertion is not a revocation. Construct it with NewRevocations or
-// NewRevocationsWithLimits; its zero value is not usable.
+// NewRevocationsWithLimits; its zero value is not usable. Writers/Check share
+// one RWMutex; later same-process reads observe completed writes. No revocation
+// removal, background expiry, distributed persistence or close lifecycle exists.
 type Revocations struct {
 	mu           sync.RWMutex
 	capabilities map[issuerValue]struct{}
@@ -126,7 +128,9 @@ func (store *Revocations) RevokeIssuedBefore(ctx context.Context, issuer string,
 // Check reports whether any exact revocation boundary matches query. Its
 // aggregate input string length must fit MaxStringBytes before any map lookup;
 // otherwise it returns false, ErrCapacity. Verify sanitizes checker failures
-// as ErrRevocationUnknown and returns no grant.
+// as ErrRevocationUnknown and returns no grant. Direct query fields need not
+// be authenticated by this method; ctx must be non-nil. It rechecks cancellation
+// under a read lock, but does not provide a cancellable/bounded lock acquisition.
 func (store *Revocations) Check(ctx context.Context, query capability.RevocationQuery) (bool, error) {
 	if err := validContext(ctx); err != nil {
 		return false, err

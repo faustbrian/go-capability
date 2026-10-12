@@ -202,6 +202,9 @@ func TestStoreValidatesConfigurationRequestsAndEveryResponseState(t *testing.T) 
 	}
 }
 
+// fakeEvaler models reply/count/conflict outcomes under one mutex, not Lua,
+// server TIME, TTL expiry or persistence. Tagged tests exercise actual clients;
+// response/failure controls are configured only outside concurrent calls.
 type fakeEvaler struct {
 	mu       sync.Mutex
 	state    map[string][3]int64

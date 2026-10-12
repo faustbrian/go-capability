@@ -1,5 +1,10 @@
 // Package capabilityhttp integrates verified signed-URL grants with net/http
-// without hiding application authorization or bounded-use consumption.
+// without hiding application authorization or bounded-use consumption. Start
+// with NewVerifier and trusted static Origin/Issuer; SignRequest only mutates
+// an explicitly supplied outgoing URL. It owns no server/client/body lifecycle
+// or worker. Profiles and callbacks stay borrowed and immutable; shared use
+// requires cooperative concurrent-safe collaborators. The local signed-URL
+// policy is DEC-006/007/011, not HTTP Message Signatures or automatic effects.
 package capabilityhttp
 
 import (
@@ -17,32 +22,55 @@ import (
 
 // Clock supplies request-time wall clock values.
 type Clock interface {
+	// Now supplies trusted wall time, concurrently and promptly without reading
+	// untrusted request fields.
 	Now() time.Time
 }
 
 // BodyDigest obtains an already computed SHA-256 digest. It must not consume a
-// request body unless it also restores it for the application.
+// request body unless it also restores it for the application. Bound untrusted
+// pre-authentication work, honor request context and support concurrent calls.
+// Returned digest is borrowed for that call; panics are not contained.
 type BodyDigest func(*http.Request) ([]byte, error)
 
-// ErrorHandler writes a secret-safe verification failure response.
+// ErrorHandler owns synchronous failure rendering/redaction. It may run
+// concurrently; bound work and never expose tokens or underlying diagnostics.
+// Handler panics are not contained; nil configuration selects fixed 401 text.
 type ErrorHandler func(http.ResponseWriter, *http.Request, error)
 
 // VerifierOptions configures signed-URL verification for one immutable profile.
 type VerifierOptions struct {
 	// Issuer is the required trusted namespace, never inferred from the request.
-	Issuer       string
-	Profile      capability.URLProfile
-	Resolver     capability.Resolver
-	Origin       string
-	Clock        Clock
-	Skew         time.Duration
-	Limits       capability.Limits
-	Revocations  capability.RevocationChecker
-	BodyDigest   BodyDigest
+	Issuer string
+	// Profile is validated by value, but its slice storage remains borrowed and immutable
+	// for verifier lifetime.
+	Profile capability.URLProfile
+	// Resolver is mandatory borrowed trusted issuer/key policy; shared use must be
+	// concurrency-safe.
+	Resolver capability.Resolver
+	// Origin is trusted static scheme/authority required for absolute profiles, never
+	// request Host or forwarding data.
+	Origin string
+	// Clock is mandatory borrowed safe wall clock; callbacks must return promptly and
+	// support concurrent use.
+	Clock Clock
+	// Skew is nonnegative payload time tolerance, not an HTTP deadline.
+	Skew time.Duration
+	// Limits is explicit positive parser policy, copied by value.
+	Limits capability.Limits
+	// Revocations is optional borrowed post-authentication policy; nil disables revocation.
+	Revocations capability.RevocationChecker
+	// BodyDigest must be present exactly when required; bound pre-authentication work and
+	// restore consumed bodies.
+	BodyDigest BodyDigest
+	// ErrorHandler is optional synchronous failure reporting; nil selects fixed 401 text,
+	// custom handlers own redaction.
 	ErrorHandler ErrorHandler
 }
 
-// Verifier verifies request URLs and attaches authenticated grants to context.
+// Verifier verifies request URLs and carries grants. Construct with NewVerifier;
+// zero is unusable. Shared use requires immutable profile slices and safe
+// clock/resolver/digest/error callbacks; they can block or panic synchronously.
 type Verifier struct {
 	issuer       string
 	profile      capability.URLProfile
@@ -59,7 +87,9 @@ type Verifier struct {
 type grantContextKey struct{}
 
 // NewVerifier validates an HTTP integration. Origin is trusted static external
-// configuration for absolute profiles; request forwarding headers are ignored.
+// configuration for absolute profiles; request host/forwarding headers are ignored.
+// Profile slices and callbacks stay borrowed for lifetime, not defensively
+// cloned. Failure returns nil; nil interfaces reject, typed nil is not detected.
 func NewVerifier(options VerifierOptions) (*Verifier, error) {
 	if options.Issuer == "" || len(options.Issuer) > options.Limits.MaxFieldBytes || !utf8.ValidString(options.Issuer) {
 		return nil, capability.ErrInvalidConfiguration
@@ -106,6 +136,10 @@ func NewVerifier(options VerifierOptions) (*Verifier, error) {
 }
 
 // VerifyRequest verifies a request but does not authorize or consume its grant.
+// Nil request/URL refuses. BodyDigest runs before authentication; the caller
+// must bound untrusted reads and restore bytes for later handlers. Digest errors
+// are sanitized to ErrURLBinding/context categories; no panic or forced timeout
+// boundary is added. Only selected static origin plus RequestURI is trusted.
 func (verifier *Verifier) VerifyRequest(request *http.Request) (capability.Grant, error) {
 	if request == nil || request.URL == nil {
 		return capability.Grant{}, capability.ErrInvalidConfiguration
@@ -155,6 +189,9 @@ func redact(kind, cause error) error {
 
 // Middleware verifies and carries a Grant. The next handler remains responsible
 // for Grant.Authorize, Grant.Consume, and the protected side effect ordering.
+// Nil next produces a fixed 500; verification failure invokes ErrorHandler.
+// Custom handler redaction/panics and downstream effects remain caller-owned.
+// It creates no worker and carries the same grant visible through caphttp.
 func (verifier *Verifier) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if next == nil {
@@ -170,7 +207,8 @@ func (verifier *Verifier) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-// GrantFromContext returns the verified grant carried by Middleware.
+// GrantFromContext returns the middleware Grant or zero/false for nil/absent
+// context. Presence is authentication attribution, not authorization or use count.
 func GrantFromContext(ctx context.Context) (capability.Grant, bool) {
 	if ctx == nil {
 		return capability.Grant{}, false
@@ -179,7 +217,9 @@ func GrantFromContext(ctx context.Context) (capability.Grant, bool) {
 	return grant, found
 }
 
-// SignRequest signs req.URL and mutates it only after complete successful issuance.
+// SignRequest signs request.URL and replaces it only after successful issuance.
+// Caller owns exclusive URL mutation and supplies already computed body digest.
+// No body read, HTTP send, header rewriting or rollback of signer effects occurs.
 func SignRequest(
 	ctx context.Context,
 	request *http.Request,

@@ -1,6 +1,10 @@
 // Package capabilitymemory provides process-local replay and revocation
 // adapters. State is not shared across processes and therefore cannot provide
-// cluster-wide one-time or instant revocation semantics.
+// cluster-wide one-time or instant revocation semantics. Start with explicit
+// clocks and NewConsumptionStore/NewRevocations; finite limits cover per-store
+// record and owned string admission, not exact heap usage. Callers own cleanup,
+// revocation insertion errors and shutdown; no background worker or cgo is added.
+// Store mutation/read methods serialize on their owner locks (DEC-008/009).
 package capabilitymemory
 
 import (
@@ -14,6 +18,8 @@ import (
 
 // Clock supplies wall time for expiry decisions.
 type Clock interface {
+	// Now supplies trusted wall time concurrently and promptly; called outside store
+	// locks.
 	Now() time.Time
 }
 
@@ -27,7 +33,9 @@ type consumptionIdentity struct{ issuer, capabilityID string }
 
 // ConsumptionStore owns finite process-local atomic replay state. Construct it
 // with NewConsumptionStore or NewConsumptionStoreWithLimits; its zero value is
-// not usable. Records are never evicted to make room for another identity.
+// not usable. Consume/Cleanup serialize on one mutex; borrowed Clock runs
+// before acquisition and must return promptly. Records are never evicted for
+// capacity, and no cleanup timer, close method or durable transaction is owned.
 type ConsumptionStore struct {
 	mu      sync.Mutex
 	clock   Clock
@@ -53,7 +61,10 @@ func NewConsumptionStoreWithLimits(clock Clock, limits StoreLimits) (*Consumptio
 // Consume atomically records one use. ErrCapacity refuses an oversized identity
 // or new record before consumption without eviction or allowance reset.
 // Repeats use no additional admission; live conflicting bounds return
-// ErrReplayConflict and exhausted records return ErrReplayExhausted.
+// ErrReplayConflict and exhausted records return ErrReplayExhausted. ctx must
+// be non-nil; expired/nonpositive/empty inputs return ErrInvalidConfiguration.
+// Expiry is sampled before lock acquisition, without verifier skew. Cancellation
+// is rechecked after the lock; no bounded lock wait or clock panic boundary is added.
 func (store *ConsumptionStore) Consume(ctx context.Context, request capability.Consumption) (capability.ConsumptionResult, error) {
 	if ctx == nil {
 		return capability.ConsumptionResult{}, capability.ErrInvalidConfiguration
