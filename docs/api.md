@@ -2,10 +2,12 @@
 
 [Documentation index](README.md)
 
-This reference describes the unreleased `github.com/faustbrian/go-capability/v2`
-source, not the published unversioned v1 module. All seven public package imports
-use `/v2`; token-wire v1 remains unchanged. The [API baseline](../api/README.md)
-is generated from the actual v2 exported contract. See
+This reference describes the published `github.com/faustbrian/go-capability/v2`
+API; public v2.0.1 is available, and the unversioned v1 module remains separate.
+Current source documentation may be newer than the immutable release's prose.
+All seven public package imports use `/v2`; token-wire v1 remains unchanged.
+The [API baseline](../api/README.md) is generated from the actual v2 exported
+contract. See
 [module adoption](adoption.md#module-and-import-paths-v2-source).
 
 ## Core lifecycle
