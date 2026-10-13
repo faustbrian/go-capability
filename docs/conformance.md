@@ -1,5 +1,7 @@
 # Conformance
 
+[Documentation index](README.md)
+
 The package conforms to its local capability v1 and signed-URL profiles, not to
 JWT, PASETO, Macaroons, OAuth access tokens, HTTP Message Signatures, or a
 provider signed-URL protocol.

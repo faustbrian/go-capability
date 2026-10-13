@@ -1,5 +1,7 @@
 # Deployment profiles
 
+[Documentation index](README.md)
+
 ## Download
 
 - method `GET`;
@@ -47,3 +49,5 @@ path, or covered query. Issue a new capability for the exact redirect target.
 Client retries of the same URL are safe only when the capability is reusable or
 the protected operation has explicit bounded-use reconciliation; never retry an
 unknown consumption outcome automatically.
+
+Continue with [API reference](api.md).

@@ -1,5 +1,7 @@
 # Security review
 
+[Documentation index](README.md)
+
 ## Model revision and source scope
 
 Repository threat model revision **6**, dated **2026-10-04**, covers

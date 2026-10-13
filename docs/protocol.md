@@ -1,5 +1,7 @@
 # Protocol and threat model
 
+[Documentation index](README.md)
+
 Material interpretations and package-owned protocol choices are indexed in the
 [specification decision register](specification-decisions.md). Pinned source
 versions and digests are recorded in the

@@ -1,5 +1,7 @@
 # Adoption, migration, and FAQ
 
+[Documentation index](README.md)
+
 ## Adoption checklist
 
 1. Name one issuer namespace and explicit audiences.

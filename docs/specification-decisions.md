@@ -1,5 +1,7 @@
 # Capability specification decisions
 
+[Documentation index](README.md)
+
 This register records every material interpretation and package-owned policy in
 the capability v1 token and signed-URL profiles. Normative sources and exact
 digests are pinned in the [source manifest](../specification/manifest.tsv).

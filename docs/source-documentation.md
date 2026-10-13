@@ -1,5 +1,7 @@
 # Source documentation audit
 
+[Documentation index](README.md)
+
 ## Scope, acceptance and inventory
 
 This Tier A pass owns source prose at baseline

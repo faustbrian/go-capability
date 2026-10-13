@@ -1,5 +1,7 @@
 # API reference
 
+[Documentation index](README.md)
+
 This reference describes the unreleased `github.com/faustbrian/go-capability/v2`
 source, not the published unversioned v1 module. All seven public package imports
 use `/v2`; token-wire v1 remains unchanged. The [API baseline](../api/README.md)

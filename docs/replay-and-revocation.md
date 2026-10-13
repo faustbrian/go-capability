@@ -1,5 +1,7 @@
 # Replay, revocation, and failure modes
 
+[Documentation index](README.md)
+
 ## Atomic consumption
 
 `ConsumptionStore.Consume` owns synchronization for the exact authenticated

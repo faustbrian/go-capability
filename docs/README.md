@@ -1,5 +1,7 @@
 # Documentation
 
+[Package README](../README.md)
+
 ## Getting started
 
 - [API](api.md)
@@ -27,3 +29,8 @@
 
 - [Contribution guide](../CONTRIBUTING.md)
 - [Release history](../CHANGELOG.md)
+
+## Ecosystem navigation
+
+See the [versioned Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.8.4/docs/ecosystem/README.md) for package
+selection, explicit ownership, and compatibility guidance.
