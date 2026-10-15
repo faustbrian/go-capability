@@ -3,6 +3,7 @@ package capability
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -261,7 +262,9 @@ func Verify(ctx context.Context, token string, resolver Resolver, options Verify
 			return Grant{}, ErrRevoked
 		}
 	}
-	return newGrant(parsed.Payload, parsed.Header), nil
+	grant := newGrant(parsed.Payload, parsed.Header)
+	grant.envelopeDigest = sha256.Sum256([]byte(token))
+	return grant, nil
 }
 
 func canonicalHeader(header Header) ([]byte, error) {

@@ -5,6 +5,16 @@ the module follows semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Add opaque identity proof custody, exact purpose/reference contracts and a
+  configured service over the existing capability protocol. Pin the trusted
+  issuer explicitly for both issuance and verification; verification does not
+  consume one-time authority. Transfer clears shared custody once, and command
+  digests bind exact original token bytes without revealing them.
+- Expose immutable authenticated envelope digests for original command and
+  recovery correlation, without replacing signature or current authority checks.
+
 ### Documentation
 
 - Clarify explicit issuer/key trust, borrowed collaborators, parsing versus

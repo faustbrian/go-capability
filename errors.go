@@ -6,6 +6,8 @@ import (
 )
 
 var (
+	// ErrProofTransferFailed redacts a failed or panicking custody callback.
+	ErrProofTransferFailed = errors.New("capability: proof transfer failed")
 	// ErrCapacity reports refusal before state insertion or consumption. Trusted
 	// adapters must only return this classification when no use was committed.
 	ErrCapacity = errors.New("capability: state capacity reached")

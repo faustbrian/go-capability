@@ -18,6 +18,14 @@ a JWT or PASETO replacement, payload encryption, DRM, or legal
 non-repudiation. Applications remain responsible for authenticating callers
 and authorizing each attempted use of a verified grant.
 
+For identity workflows, [opaque proof custody](docs/identity-contracts.md)
+adds explicit one-transfer ownership, purpose/reference metadata and original
+command binding without changing the `cap1` protocol or automatically consuming
+on verification. `ServiceConfig.Issuer`, verifier key owners and attempted uses
+must independently select the same trusted issuer. Token claims never choose
+application trust. The optional `postgres/identity` module supplies coordinator-
+owned durable issuance, one-use reservation and original-outcome recovery.
+
 Version 2 uses `github.com/faustbrian/go-capability/v2`. The examples below
 use its explicit issuer configuration, issuer-scoped replay and finite memory
 admission. Published v1 remains available at the unversioned module path; its

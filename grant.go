@@ -6,8 +6,9 @@ package capability
 // with immutable Use inputs; they do not recheck time, revocation or key policy.
 // Reverify before later effects as application policy requires.
 type Grant struct {
-	payload Payload
-	header  Header
+	payload        Payload
+	header         Header
+	envelopeDigest [32]byte
 }
 
 // Use describes one concrete application operation to authorize.
@@ -39,6 +40,13 @@ func (grant Grant) Payload() Payload {
 
 // Header returns the authenticated key and algorithm metadata.
 func (grant Grant) Header() Header { return grant.header }
+
+// EnvelopeDigest returns SHA-256 of the complete canonical token authenticated
+// by Verify, including its signature. The value is immutable, retains no bearer
+// bytes, and is zero for a zero Grant. It differs from Reference.Digest and is
+// not a keyed replay identifier, consumption receipt, or fresh validity evidence.
+// Matching this metadata never replaces signature, authority, or lifecycle checks.
+func (grant Grant) EnvelopeDigest() [32]byte { return grant.envelopeDigest }
 
 // Authorize compares exact required authority under DEC-005. Any mismatch
 // returns ErrUnauthorized; extra use caveats are ignored and bearer grants do
