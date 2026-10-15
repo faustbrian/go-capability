@@ -32,7 +32,11 @@ import (
 // erasure of cryptographic state/runtime memory cannot be guaranteed. Concurrent
 // calls and Transfer are safe; no IO, clocks, caches or goroutines are owned.
 func (proof Proof) CommandDigest(key [32]byte, fieldPath string, maximumBytes int) ([32]byte, error) {
-	if key == ([32]byte{}) || len(fieldPath) == 0 || len(fieldPath) > 4096 || !utf8.ValidString(fieldPath) || maximumBytes <= 0 {
+	pathLength := len(fieldPath)
+	if pathLength < 1 || pathLength > 4096 {
+		return [32]byte{}, ErrInvalidConfiguration
+	}
+	if key == ([32]byte{}) || !utf8.ValidString(fieldPath) || maximumBytes <= 0 {
 		return [32]byte{}, ErrInvalidConfiguration
 	}
 	if err := proof.ValidateBounds(1, maximumBytes); err != nil {
@@ -49,7 +53,7 @@ func (proof Proof) CommandDigest(key [32]byte, fieldPath string, maximumBytes in
 	mac := hmac.New(sha256.New, key[:])
 	_, _ = mac.Write([]byte("identity-command-secret-v1"))
 	var lengths [8]byte
-	binary.BigEndian.PutUint32(lengths[:4], uint32(len(fieldPath)))
+	binary.BigEndian.PutUint32(lengths[:4], uint32(pathLength))
 	_, _ = mac.Write(lengths[:4])
 	_, _ = mac.Write([]byte(fieldPath))
 	binary.BigEndian.PutUint64(lengths[:], uint64(len(token)))
