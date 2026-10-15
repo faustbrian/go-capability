@@ -38,10 +38,14 @@ func NewPurpose(value string) (Purpose, error) {
 // Reference is non-secret lookup metadata, never authority. It is a mutable
 // value: applications must validate reconstructed values before storage/use.
 type Reference struct {
+	// CapabilityID is the original bounded grant ID, not proof of existence.
 	CapabilityID string
-	Purpose      Purpose
-	Digest       [32]byte
-	ExpiresAt    time.Time
+	// Purpose is the exact literal operation bound by the producer.
+	Purpose Purpose
+	// Digest identifies original canonical token framing, not use authority.
+	Digest [32]byte
+	// ExpiresAt is the exclusive original expiry at UTC whole-second precision.
+	ExpiresAt time.Time
 }
 
 // NewReference validates a bounded ID, literal purpose, nonzero caller-supplied
@@ -185,7 +189,11 @@ func (proof Proof) snapshot() ([]byte, error) {
 // Service is the canonical issuing and purpose/audience verification boundary.
 // Verification never consumes a grant or commits a protected operation.
 type Service interface {
+	// Issue signs one payload under the selected issuer and returns owned proof
+	// custody plus reference metadata. Expiry must be explicit; no use is consumed.
 	Issue(context.Context, Payload) (Proof, Reference, error)
+	// Verify authenticates a private proof snapshot and exact purpose/audience.
+	// It returns zero on failure and never consumes or transfers the proof.
 	Verify(context.Context, Proof, Purpose, string) (Grant, error)
 }
 
@@ -196,12 +204,19 @@ type Service interface {
 type ServiceConfig struct {
 	// Issuer is independently selected trusted deployment policy, not a token
 	// claim. It fixes both issuance and verification to this exact key owner.
-	Issuer      string
-	Signer      Signer
-	Resolver    Resolver
-	Clock       func() time.Time
-	Limits      Limits
-	Skew        time.Duration
+	Issuer string
+	// Signer is the borrowed mandatory issuer-owned signing collaborator.
+	Signer Signer
+	// Resolver supplies independently trusted key ownership and lifecycle policy.
+	Resolver Resolver
+	// Clock is a borrowed fast local trusted clock, invoked outside custody locks.
+	Clock func() time.Time
+	// Limits bounds parsing and issuance; zero selects no implicit defaults.
+	Limits Limits
+	// Skew is nonnegative payload time tolerance, never key-lifecycle tolerance.
+	Skew time.Duration
+	// Revocations optionally checks current policy after signature/time validation.
+	// Nil is permitted only when deployment policy allows no revocation source.
 	Revocations RevocationChecker
 }
 
