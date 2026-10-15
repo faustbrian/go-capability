@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Make native framing bounds explicit at count, length, index and expiry
+  conversions. Preserve original encrypted preparation and replay-HMAC bytes;
+  larger custom cryptographic limits do not expand the native token frame.
+
 - Reject original issuance preparation when its final successful authority
   lookup returns after cancellation or the preparation deadline. Return the
   typed context error and destroy every acquired proof instead of retaining

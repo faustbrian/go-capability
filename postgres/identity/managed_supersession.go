@@ -34,7 +34,7 @@ func (ManagedEmailSupersessionScope) Format(s fmt.State, _ rune) {
 func persistManagedEmailSupersession(ctx context.Context, tenant, command, capabilityID string, scope ManagedEmailSupersessionScope, exec func(context.Context, string, ...any) (int64, error)) error {
 	// The shared lock primitive is purpose-neutral; the metadata/row predicates
 	// below remain the distinct managed profile, not a magic-link reinterpretation.
-	if err := lockMagicLinkScope(ctx, MagicLinkSupersessionScope{digest: scope.digest}, exec); err != nil {
+	if err := lockMagicLinkScope(ctx, MagicLinkSupersessionScope(scope), exec); err != nil {
 		return err
 	}
 	args := []any{tenant, scope.digest[:], command, capabilityID}
@@ -72,9 +72,10 @@ func ManagedEmailScopeFromPayload(p capability.Payload) (ManagedEmailSupersessio
 	fields := []string{p.Issuer, p.Audiences[0], p.Tenant, p.Subject, p.Resource, p.Operation, p.Caveats["email.confirm_operation"]}
 	for n, value := range fields {
 		limit := 128
-		if n == 0 {
+		switch n {
+		case 0:
 			limit = 4096
-		} else if n == 1 {
+		case 1:
 			limit = 256
 		}
 		if value == "" || len(value) > limit || !utf8.ValidString(value) {
@@ -120,7 +121,7 @@ func CheckManagedEmailResendCooldown(ctx context.Context, w kernel.Work, owner k
 	if err != nil || feature.Operation != op || feature.Contributor != (kernel.ContributorDescriptor{Owner: "identity/email/postgres", ContractID: "identity.email", Version: 1}) || b.ValidateFor(op) != nil {
 		return invalid()
 	}
-	if err := lockMagicLinkScope(ctx, MagicLinkSupersessionScope{digest: scope.digest}, w.Exec); err != nil {
+	if err := lockMagicLinkScope(ctx, MagicLinkSupersessionScope(scope), w.Exec); err != nil {
 		return err
 	}
 	rows, err := w.Query(ctx, `SELECT COALESCE(max(created_at)+($3::bigint*interval '1 microsecond')<=clock_timestamp(),false) FROM public.capability_identity_one_use WHERE tenant_id=$1 AND purpose='identity.identifier.verify' AND supersession_scope=$2`, string(b.TenantID), scope.digest[:], interval.Microseconds())

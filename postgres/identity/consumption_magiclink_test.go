@@ -126,7 +126,7 @@ func TestPrepareMagicLinkConsumptionRejectsSignedForeignProfiles(t *testing.T) {
 		})
 	}
 	var i *Issuer
-	if out, err := i.PrepareMagicLinkConsumption(nil, identity.CommandBinding{}, "", "", capability.Proof{}, [32]byte{}, 0); err == nil || out != (kernel.CapabilityPlan{}) {
+	if out, err := i.PrepareMagicLinkConsumption(nilContextForTest(), identity.CommandBinding{}, "", "", capability.Proof{}, [32]byte{}, 0); err == nil || out != (kernel.CapabilityPlan{}) {
 		t.Fatal("zero composition admitted")
 	}
 }

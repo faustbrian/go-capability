@@ -153,7 +153,7 @@ func MagicLinkScopeFromPayload(p capability.Payload) (MagicLinkSupersessionScope
 		return zero, invalid()
 	}
 	for _, b := range []byte(fields[10]) {
-		if !((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9') || b == '-' || b == '_') {
+		if (b < 'a' || b > 'z') && (b < 'A' || b > 'Z') && (b < '0' || b > '9') && b != '-' && b != '_' {
 			return zero, invalid()
 		}
 	}

@@ -129,14 +129,15 @@ func TestMagicLinkSupersessionScopePreservesExactOriginalFlow(t *testing.T) {
 	}
 	for _, key := range []string{"magiclink.identifier", "magiclink.canonical-email", "magiclink.callback", "magiclink.intent", "magiclink.flow", "magiclink.flow-binding", "magiclink.profile"} {
 		changed := supersessionPayload()
-		if key == "magiclink.identifier" {
+		switch key {
+		case "magiclink.identifier":
 			changed.Resource = "identity.magiclink/another"
 			changed.Caveats[key] = "another"
-		} else if key == "magiclink.intent" {
+		case "magiclink.intent":
 			changed.Caveats[key] = "signup-if-allowed"
-		} else if key == "magiclink.flow-binding" || key == "magiclink.profile" {
+		case "magiclink.flow-binding", "magiclink.profile":
 			changed.Caveats[key] = strings.Repeat("3", 64)
-		} else {
+		default:
 			changed.Caveats[key] = "x" + changed.Caveats[key][1:]
 		}
 		other, err := MagicLinkScopeFromPayload(changed)

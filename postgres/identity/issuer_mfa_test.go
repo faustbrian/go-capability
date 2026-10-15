@@ -83,7 +83,7 @@ func TestMFAIssuerPreservesChallengeIDAndEncryptedCustody(t *testing.T) {
 			}
 		})
 	}
-	if out, err := i.PrepareMFAContinuation(nil, b, payload); err == nil || out.state != nil {
+	if out, err := i.PrepareMFAContinuation(nilContextForTest(), b, payload); err == nil || out.state != nil {
 		t.Fatal("nil context acquired custody")
 	}
 	var absent *Issuer

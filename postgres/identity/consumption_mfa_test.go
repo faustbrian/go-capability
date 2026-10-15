@@ -42,7 +42,7 @@ func TestPrepareMFAConsumptionPreservesOriginalChild(t *testing.T) {
 		t.Fatal(err)
 	}
 	proof := prepared.state.proofs[0]
-	defer proof.Transfer(context.Background(), func(context.Context, []byte) error { return nil })
+	defer func() { _ = proof.Transfer(context.Background(), func(context.Context, []byte) error { return nil }) }()
 	grant, err := i.service.Verify(context.Background(), proof, "identity.mfa.complete", config.Audience)
 	if err != nil {
 		t.Fatal(err)
@@ -174,7 +174,7 @@ func TestPrepareMFAConsumptionRejectsSignedForeignProfiles(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer proof.Transfer(context.Background(), func(context.Context, []byte) error { return nil })
+			defer func() { _ = proof.Transfer(context.Background(), func(context.Context, []byte) error { return nil }) }()
 			// Use the real envelope digest, not a mismatched-envelope shortcut.
 			grant, err := fixtureService.Verify(context.Background(), proof, capability.Purpose(p.Operation), "identity")
 			if err != nil {
@@ -196,7 +196,7 @@ func TestPrepareMFAConsumptionVerificationFailuresRemainClosed(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer proof.Transfer(context.Background(), func(context.Context, []byte) error { return nil })
+			defer func() { _ = proof.Transfer(context.Background(), func(context.Context, []byte) error { return nil }) }()
 			grant, err := i.service.Verify(context.Background(), proof, "identity.mfa.complete", "identity")
 			if err != nil {
 				t.Fatal(err)

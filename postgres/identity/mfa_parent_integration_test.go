@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-capability/v2"
 	issuerpg "github.com/faustbrian/go-capability/postgres/identity"
+	"github.com/faustbrian/go-capability/v2"
 	identity "github.com/faustbrian/go-identity"
 	kernel "github.com/faustbrian/go-identity/postgres"
 	database "github.com/faustbrian/go-postgres"

@@ -24,7 +24,7 @@ func TestParticipantRequiresCoordinatorAuthority(t *testing.T) {
 		p.FinalizeCapability(context.Background(), identitypostgres.CapabilityFinalizeWork{}),
 		(*Participant)(nil).ReserveCapability(context.Background(), identitypostgres.CapabilityReservationWork{}),
 		(&Participant{}).ReserveCapability(context.Background(), identitypostgres.CapabilityReservationWork{}),
-		p.ReserveCapability(nil, identitypostgres.CapabilityReservationWork{}),
+		p.ReserveCapability(nilContextForTest(), identitypostgres.CapabilityReservationWork{}),
 	} {
 		if !errors.As(err, &invalid) {
 			t.Fatalf("authority not rejected: %T", err)

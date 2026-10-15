@@ -62,7 +62,7 @@ func TestPrepareIdentifierConsumptionRejectsSubstitutionAndInvalidCustody(t *tes
 	if _, err := i.PrepareIdentifierConsumption(context.Background(), identity.Command{}, proof, 1); err == nil {
 		t.Fatal("zero command accepted")
 	}
-	if _, err := i.PrepareIdentifierConsumption(nil, command, proof, 1); err == nil {
+	if _, err := i.PrepareIdentifierConsumption(nilContextForTest(), command, proof, 1); err == nil {
 		t.Fatal("nil context accepted")
 	}
 	var zero *Issuer

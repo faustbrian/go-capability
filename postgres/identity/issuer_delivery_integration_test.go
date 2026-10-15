@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/faustbrian/go-authorization/v3"
-	"github.com/faustbrian/go-capability/v2"
 	identitycapability "github.com/faustbrian/go-capability/postgres/identity"
+	"github.com/faustbrian/go-capability/v2"
 	identity "github.com/faustbrian/go-identity"
 	"github.com/faustbrian/go-identity/delivery"
 	deliverypostgres "github.com/faustbrian/go-identity/delivery/postgres"

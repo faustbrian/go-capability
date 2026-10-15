@@ -22,6 +22,10 @@ import (
 const issuancePreparationHeader = "ICIP1"
 const maximumIssuancePreparation = 512 << 10
 
+// Original native preparation uses the fixed default token ingress profile,
+// independent of larger configurable cryptographic limits.
+const maximumPreparedTokenBytes = 16 << 10
+
 // PreparationVerificationKey pins local signing-verification material and key
 // lifecycle policy. Exactly one of HMAC or Ed25519 must be populated.
 type PreparationVerificationKey struct {
@@ -152,13 +156,17 @@ func (c *IssuancePreparationCodec) CheckpointPreparation(ctx context.Context, p 
 	if err != nil || len(s.proofs) != len(s.plan.Grants) {
 		return nil, invalid()
 	}
+	count := len(s.proofs)
+	if count < 1 || count > 16 {
+		return nil, invalid()
+	}
 	s.checkpointStarted = true
 	s.checkpointGeneration = generation
 	s.checkpointOwner = c
 	// One bounded allocation prevents abandoned backing arrays containing
 	// plaintext when append grows the batch; the entire buffer is cleared.
-	plain := make([]byte, 2, 2+len(s.proofs)*(8+capability.DefaultLimits().MaxTokenBytes))
-	binary.BigEndian.PutUint16(plain, uint16(len(s.proofs)))
+	plain := make([]byte, 2, 2+count*(8+maximumPreparedTokenBytes))
+	binary.BigEndian.PutUint16(plain, uint16(count))
 	defer func() {
 		clear(plain)
 		if recover() != nil {
@@ -174,7 +182,8 @@ func (c *IssuancePreparationCodec) CheckpointPreparation(ctx context.Context, p 
 	}()
 	for index, proof := range s.proofs {
 		err = proof.Transfer(ctx, func(ctx context.Context, token []byte) error {
-			if len(token) == 0 || len(token) > capability.DefaultLimits().MaxTokenBytes {
+			size := len(token)
+			if size < 1 || size > maximumPreparedTokenBytes || index < 0 || index > 15 {
 				return invalid()
 			}
 			grant, e := c.verify(ctx, token, s.binding, s.plan, index)
@@ -182,7 +191,7 @@ func (c *IssuancePreparationCodec) CheckpointPreparation(ctx context.Context, p 
 				return invalid()
 			}
 			plain = binary.BigEndian.AppendUint32(plain, s.plan.Grants[index].ReplayKeyVersion)
-			plain = binary.BigEndian.AppendUint32(plain, uint32(len(token)))
+			plain = binary.BigEndian.AppendUint32(plain, uint32(size))
 			plain = append(plain, token...)
 			if encrypt != nil {
 				return encrypt(ctx, uint16(index), token)
@@ -251,17 +260,21 @@ func (c *IssuancePreparationCodec) RestorePreparation(ctx context.Context, b ide
 		if len(remaining) < 8 || binary.BigEndian.Uint32(remaining) != metadata.ReplayKeyVersion {
 			return out, invalid()
 		}
-		length := uint64(binary.BigEndian.Uint32(remaining[4:]))
+		length := binary.BigEndian.Uint32(remaining[4:])
 		remaining = remaining[8:]
-		if length == 0 || length > uint64(capability.DefaultLimits().MaxTokenBytes) || length > uint64(len(remaining)) {
+		if length == 0 || length > maximumPreparedTokenBytes {
 			return out, invalid()
 		}
-		grant, e := c.verify(ctx, remaining[:int(length)], b, plan, index)
+		size := int(length)
+		if size > len(remaining) {
+			return out, invalid()
+		}
+		grant, e := c.verify(ctx, remaining[:size], b, plan, index)
 		if e != nil {
 			return out, issuerFailure(ctx)
 		}
 		p.grants = append(p.grants, grant)
-		remaining = remaining[int(length):]
+		remaining = remaining[size:]
 	}
 	if len(remaining) != 0 {
 		return out, invalid()
@@ -296,47 +309,69 @@ func (c *IssuancePreparationCodec) preparationContext(b identity.CommandBinding,
 	// enter AAD, including fields not used to select the prospective subject.
 	encoded := make([]byte, 0, 4096)
 	for _, field := range []string{string(b.CommandID), string(b.TenantID), string(b.UserID), string(b.AnonymousFlowID), string(b.ActorID), string(b.ActorKind), string(b.OperationID), string(b.PolicyID), string(b.SchemaID), string(b.CorrelationID), string(b.RecordID), string(b.LinkMode), string(plan.RegistrationUserID), plan.Contributor.Owner, plan.Contributor.ContractID} {
-		if len(field) > 256 {
+		size := len(field)
+		if size < 0 || size > 256 {
 			return secretenvelope.Context{}, invalid()
 		}
-		encoded = binary.BigEndian.AppendUint32(encoded, uint32(len(field)))
+		encoded = binary.BigEndian.AppendUint32(encoded, uint32(size))
 		encoded = append(encoded, field...)
 	}
 	for _, version := range []uint64{uint64(b.PolicyVersion), uint64(b.SchemaVersion), uint64(plan.Contributor.Version)} {
 		encoded = binary.BigEndian.AppendUint64(encoded, version)
 	}
-	encoded = binary.BigEndian.AppendUint16(encoded, uint16(len(plan.Grants)))
+	count := len(plan.Grants)
+	if count < 1 || count > 16 {
+		return secretenvelope.Context{}, invalid()
+	}
+	encoded = binary.BigEndian.AppendUint16(encoded, uint16(count))
 	for _, grant := range plan.Grants {
 		for _, field := range []string{grant.CapabilityID, string(grant.Purpose)} {
-			if len(field) > 256 {
+			size := len(field)
+			if size < 0 || size > 256 {
 				return secretenvelope.Context{}, invalid()
 			}
-			encoded = binary.BigEndian.AppendUint32(encoded, uint32(len(field)))
+			encoded = binary.BigEndian.AppendUint32(encoded, uint32(size))
 			encoded = append(encoded, field...)
 		}
 		encoded = binary.BigEndian.AppendUint32(encoded, grant.ReplayKeyVersion)
 		encoded = append(encoded, grant.ReplayDigest[:]...)
 		encoded = append(encoded, grant.ProofFingerprint[:]...)
-		encoded = binary.BigEndian.AppendUint64(encoded, uint64(grant.ExpiresAt.Unix()))
+		expiry := grant.ExpiresAt.Unix()
+		if expiry <= 0 {
+			return secretenvelope.Context{}, invalid()
+		}
+		encoded = binary.BigEndian.AppendUint64(encoded, uint64(expiry))
 		encoded = binary.BigEndian.AppendUint32(encoded, grant.MaxUses)
 	}
 	// Append only for the new profile so historical ordinary/signup AAD stays
 	// byte-identical. The tagged selection prevents retargeting encrypted custody.
 	if plan.ResetRecipientUserID != "" {
 		for _, field := range []string{"reset-recipient-v1", string(plan.ResetRecipientUserID)} {
-			encoded = binary.BigEndian.AppendUint32(encoded, uint32(len(field)))
+			size := len(field)
+			if size < 0 || size > 256 {
+				return secretenvelope.Context{}, invalid()
+			}
+			encoded = binary.BigEndian.AppendUint32(encoded, uint32(size))
 			encoded = append(encoded, field...)
 		}
 	}
 	if plan.MagicLinkRecipientUserID != "" {
 		for _, field := range []string{"magic-link-recipient-v1", string(plan.MagicLinkRecipientUserID)} {
-			encoded = binary.BigEndian.AppendUint32(encoded, uint32(len(field)))
+			size := len(field)
+			if size < 0 || size > 256 {
+				return secretenvelope.Context{}, invalid()
+			}
+			encoded = binary.BigEndian.AppendUint32(encoded, uint32(size))
 			encoded = append(encoded, field...)
 		}
 	}
 	if plan.MFAContinuationUserID != "" {
 		for _, field := range []string{"mfa-continuation-v1", string(plan.MFAContinuationUserID)} {
-			encoded = binary.BigEndian.AppendUint32(encoded, uint32(len(field)))
+			size := len(field)
+			if size < 0 || size > 256 {
+				return secretenvelope.Context{}, invalid()
+			}
+			encoded = binary.BigEndian.AppendUint32(encoded, uint32(size))
 			encoded = append(encoded, field...)
 		}
 	}

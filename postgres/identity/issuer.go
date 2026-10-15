@@ -326,7 +326,11 @@ func (i *Issuer) grantPlan(b identity.CommandBinding, subject identity.UserID, g
 	_, _ = mac.Write([]byte("golib/capability/identity-replay/v1\x00"))
 	var framed [4]byte
 	for _, field := range []string{v.Tenant, v.Operation} {
-		binary.BigEndian.PutUint32(framed[:], uint32(len(field)))
+		size := len(field)
+		if size < 1 || size > 128 {
+			return identitypostgres.CapabilityPlan{}, invalid()
+		}
+		binary.BigEndian.PutUint32(framed[:], uint32(size))
 		_, _ = mac.Write(framed[:])
 		_, _ = mac.Write([]byte(field))
 	}

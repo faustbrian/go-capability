@@ -113,7 +113,7 @@ func TestIssuerRejectsForeignOrUnboundedPreparation(t *testing.T) {
 			t.Fatal("unbounded batch admitted")
 		}
 	}
-	if _, err := i.Prepare(nil, b, []capability.Payload{v}); err == nil {
+	if _, err := i.Prepare(nilContextForTest(), b, []capability.Payload{v}); err == nil {
 		t.Fatal("nil context accepted")
 	}
 	cancelled, cancel := context.WithCancel(context.Background())

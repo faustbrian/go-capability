@@ -29,7 +29,7 @@ operations:
     run: '^TestMemoryConsumptionIsAtomicAtTheUseLimit$'
     race: true
     count: 1
-    timeout: 2m
+    timeout: 1m
 - module: "."
   gate: test
   steps:
@@ -93,7 +93,7 @@ operations:
     run: '^Test(IdentityTestPostgresConfig|NativeConsumptionIntegration|PublicCoordinatorComposition)$'
     race: true
     count: 1
-    timeout: 1m
+    timeout: 2m
 - module: "postgres/identity"
   gate: benchmark
   steps:

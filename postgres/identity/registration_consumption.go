@@ -41,10 +41,6 @@ func (i *Issuer) PrepareRegistrationVerificationConsumption(ctx context.Context,
 	return i.prepareConsumptionProfile(ctx, binding, envelope, proof, replayKeyVersion, "registration-v1")
 }
 
-func registrationConsumptionProfile(v capability.Payload) bool {
-	return emailConsumptionProfile(v, "registration-v1")
-}
-
 // Supersession is an explicit fifth management caveat. Signup retains its
 // original four-caveat grammar and cannot borrow management authority.
 func emailConsumptionProfile(v capability.Payload, profile string) bool {
