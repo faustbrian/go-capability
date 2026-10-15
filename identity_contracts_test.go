@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/faustbrian/go-capability/v2"
-	"github.com/faustbrian/go-capability/v2/memory"
+	memory "github.com/faustbrian/go-capability/v2/adapters/memory"
 )
 
 func TestIdentityPurposeExactBounds(t *testing.T) {
