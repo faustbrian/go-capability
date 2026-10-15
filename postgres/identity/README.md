@@ -1,5 +1,13 @@
 # Identity capability PostgreSQL participant
 
+`RetireEmailVerificationGrants` is callable only by the exact original native
+email-removal Apply after the kernel locks/prepares its full directory partition.
+It uses the same Work, not a new transaction or authority. Revoke only unused
+issued/reserved grants with that retained signed identifier target; preserve
+consumed/other-target history and all reservation/origin metadata. Live
+unclassified legacy grants deny removal, never guess targets or bulk-retire a
+subject. Propagate every error to roll back the complete protected mutation.
+
 Optional Go 1.27 module implementing capability-owned reservation and recovery
 through the sole identity PostgreSQL Coordinator. This is a storage adapter,
 not a workflow, signing service or independently committable store.

@@ -77,3 +77,11 @@ func TestEmailRetirementRequiresClassifiedBoundedScope(t *testing.T) {
 		t.Fatal("retirement lost cancellation", err)
 	}
 }
+
+func TestEmailRetirementRejectsUnpreparedWork(t *testing.T) {
+	for _, ctx := range []context.Context{nil, context.Background()} {
+		if err := RetireEmailVerificationGrants(ctx, kernel.Work{}, nil, identity.Command{}); err == nil {
+			t.Fatal("unprepared Work gained target retirement")
+		}
+	}
+}

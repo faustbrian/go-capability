@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Expose exact-target verification-grant retirement only within the original
+  kernel-prepared email-removal Apply. Preserve reserved/consumed provenance
+  and deny live unclassified legacy grants rather than guessing their target.
+
 - Use supported secret-envelope v2 for original issuance preparation, preserving
   provider/entropy diagnostic containment and existing ciphertext/key formats.
   Public byte-key configuration and sole-transaction custody stay unchanged.

@@ -5,7 +5,26 @@ import (
 
 	"github.com/faustbrian/go-capability/v2"
 	identity "github.com/faustbrian/go-identity"
+	kernel "github.com/faustbrian/go-identity/postgres"
 )
+
+// RetireEmailVerificationGrants revokes only unused issued/reserved verification
+// grants for the exact removed identifier in the kernel-locked original Apply
+// invocation. The native owner must propagate errors to abort the same Work.
+// Live unclassified legacy grants deny removal; reserved origin/fingerprint/
+// generation metadata and consumed/other-target history are preserved. No
+// transaction, lock protocol, credential, worker or recovery journal is created.
+// Nil, foreign, unprepared, reconstructed and returned Work deny without SQL.
+func RetireEmailVerificationGrants(ctx context.Context, w kernel.Work, owner kernel.FeatureExecutionContributor, command identity.Command) error {
+	if ctx == nil {
+		return invalid()
+	}
+	b, err := w.EmailRemovalScope(ctx, owner, command)
+	if err != nil {
+		return err
+	}
+	return retireEmailVerificationGrants(ctx, b, w.Exec)
+}
 
 // The target comes solely from the authenticated grant in the sealed issuance
 // phase, never a caller annotation, current recipient or unsigned plan field.
