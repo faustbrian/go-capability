@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Use supported secret-envelope v2 for original issuance preparation, preserving
+  provider/entropy diagnostic containment and existing ciphertext/key formats.
+  Public byte-key configuration and sole-transaction custody stay unchanged.
+
 - Make native framing bounds explicit at count, length, index and expiry
   conversions. Preserve original encrypted preparation and replay-HMAC bytes;
   larger custom cryptographic limits do not expand the native token frame.

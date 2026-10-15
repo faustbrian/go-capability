@@ -59,8 +59,8 @@ github.com/faustbrian/go-identity v0.0.0-20261015054516-5afeba0ac471 h1:/WRZC0q7
 github.com/faustbrian/go-identity v0.0.0-20261015054516-5afeba0ac471/go.mod h1:CaT22sYyoJNiv7Dk9qMNHsDon97tytbbpjMq7/2ztcM=
 github.com/faustbrian/go-identity/delivery v0.0.0-20261015061706-1f0b46ab1053 h1:XFlSTdRmnTbUMrVY1nRcwFUCtNR19cqP9XUoKqreHd0=
 github.com/faustbrian/go-identity/delivery v0.0.0-20261015061706-1f0b46ab1053/go.mod h1:gbHmgfef5iSUtki7ZEa7HnqngXCugftiOgDlPQGwYx0=
-github.com/faustbrian/go-identity/delivery/postgres v0.0.0-20261015070015-9684f45e8539 h1:FQkNURB9OI0HU+WdS6fPhUTwqQPXmFJQErQ9GflWzT8=
-github.com/faustbrian/go-identity/delivery/postgres v0.0.0-20261015070015-9684f45e8539/go.mod h1:3T+c/e08098DXTfr2xUFsnRZZKLlKyUgqL/m+9kKuMM=
+github.com/faustbrian/go-identity/delivery/postgres v0.0.0-20261015104034-f16881100907 h1:dLBvHl7G/7ZAuvrlF/BtO3KDEnvIGXNVMvOU9YslG0s=
+github.com/faustbrian/go-identity/delivery/postgres v0.0.0-20261015104034-f16881100907/go.mod h1:2YBtrqktF4lVGs0LyLWmeYZ78ZGdzanYddXxSV+m5R0=
 github.com/faustbrian/go-identity/postgres v0.0.0-20261015060432-bdc73de10a74 h1:5TzoTQC7I+eT94QkPKnZPfaeEWhpiBLCLgxPXFa7y7A=
 github.com/faustbrian/go-identity/postgres v0.0.0-20261015060432-bdc73de10a74/go.mod h1:q5W4KXCoxTEFLwwspewizDmN/6LfXo8dY+q0ZucLgfM=
 github.com/faustbrian/go-jsonrpc v1.1.1 h1:vxUzoj5o2CvlXtQDRKbyb8aP9FXvE+j937jEWMARORc=
@@ -73,8 +73,8 @@ github.com/faustbrian/go-password/v2 v2.0.2-0.20261015050515-4eb0fefa60ff h1:8BI
 github.com/faustbrian/go-password/v2 v2.0.2-0.20261015050515-4eb0fefa60ff/go.mod h1:Tqc83xc8RVAsi6JAW3dkKM1OFVos7cfayeNHBbWstsA=
 github.com/faustbrian/go-postgres v1.1.1-0.20260912090843-61261695bcc7 h1:yYXsPBwz+mm8JMdWfl+DcTdeD52C/zlBW2H4Tb40gKk=
 github.com/faustbrian/go-postgres v1.1.1-0.20260912090843-61261695bcc7/go.mod h1:1BN8d6pyyD063irAOXCGiU6Pr1kCLILnetE1UA6hoow=
-github.com/faustbrian/go-secret-envelope v1.0.0 h1:z1AqUglQLov5f9PxlHwn9lUCeRP063AtSMlwDjq/8WI=
-github.com/faustbrian/go-secret-envelope v1.0.0/go.mod h1:mk06procHoz9QhU9QJ1eWaLw3ZPO2o59g4s/5u0/X9k=
+github.com/faustbrian/go-secret-envelope/v2 v2.0.1 h1:1GHj2WZhKZihdhlbsU12o7T5kaA9z7IOy/1RQGu3RhA=
+github.com/faustbrian/go-secret-envelope/v2 v2.0.1/go.mod h1:X8VgGx/HsaHif3pNbS6A35sYg3SzF1+8A1YIZMd6Lnw=
 github.com/faustbrian/go-service v1.0.0 h1:sxfwxfsHxD2EjsDthb+u29xpp3qMtUSu/LT5lPd8e4Q=
 github.com/faustbrian/go-service v1.0.0/go.mod h1:2klNLQJfgrbRX2N41iLSEPVFwLmyg4nMVQ+kWZZudAc=
 github.com/faustbrian/go-transactional-outbox/postgres/identity v0.0.0-20261015064732-3aaa84f79f74 h1:koH85r/QOLUcaE0zHImDxDKFeVuroZXxSUFd4HOjRzM=

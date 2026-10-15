@@ -19,8 +19,8 @@ import (
 	deliverypostgres "github.com/faustbrian/go-identity/delivery/postgres"
 	identitypostgres "github.com/faustbrian/go-identity/postgres"
 	database "github.com/faustbrian/go-postgres"
-	secretenvelope "github.com/faustbrian/go-secret-envelope"
-	"github.com/faustbrian/go-secret-envelope/adapters/keyring"
+	secretenvelope "github.com/faustbrian/go-secret-envelope/v2"
+	"github.com/faustbrian/go-secret-envelope/v2/adapters/keyring"
 )
 
 // The fixture supplies only deployment keys/templates. Persistence and encrypted

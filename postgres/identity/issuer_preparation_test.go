@@ -16,7 +16,7 @@ import (
 	"github.com/faustbrian/go-capability/v2"
 	identity "github.com/faustbrian/go-identity"
 	identitypostgres "github.com/faustbrian/go-identity/postgres"
-	secretenvelope "github.com/faustbrian/go-secret-envelope"
+	secretenvelope "github.com/faustbrian/go-secret-envelope/v2"
 )
 
 func preparationFixture(t testing.TB, i *Issuer, c IssuerConfig) (*IssuancePreparationCodec, IssuancePreparationConfig) {
