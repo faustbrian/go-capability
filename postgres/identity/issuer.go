@@ -22,11 +22,17 @@ import (
 // longer require it. Audience is one exact target, PreparationTimeout is 1..30s.
 // Crypto collaborators must support concurrent bounded calls; Clock is local.
 type IssuerConfig struct {
-	Crypto                  capability.ServiceConfig
-	Audience                string
+	// Crypto pins the trusted issuer, signing and verification policy and local clock.
+	Crypto capability.ServiceConfig
+	// Audience is the single exact audience admitted for every prepared grant.
+	Audience string
+	// CurrentReplayKeyVersion selects a nonzero retained key for new replay bindings.
 	CurrentReplayKeyVersion uint32
-	RetainedReplayKeys      map[uint32][32]byte
-	PreparationTimeout      time.Duration
+	// RetainedReplayKeys holds 1..32 distinct nonzero keys, copied at construction.
+	// Retain referenced versions for the full lifetime of original command recovery.
+	RetainedReplayKeys map[uint32][32]byte
+	// PreparationTimeout bounds each signing and verification phase to 1..30 seconds.
+	PreparationTimeout time.Duration
 	// RetainEmailVerificationTargets selects migration 005 and retains the
 	// authenticated signed Resource for identifier verification. Enable before
 	// issuing signup/management links when native email removal is selected.

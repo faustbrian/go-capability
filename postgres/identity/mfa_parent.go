@@ -23,12 +23,24 @@ import (
 // MatchPayload before using identifier or session metadata. The MFA workflow
 // must still fence current authority and original browser custody atomically.
 type MFAMagicLinkParentBindings struct {
-	TenantID                           identity.TenantID
-	UserID                             identity.UserID
-	CapabilityID                       string
-	RequestCommandID, PrimaryCommandID identity.CommandID
-	ReplayKeyVersion                   uint32
-	IssuedAt, NotBefore, ExpiresAt     time.Time
+	// TenantID is the tenant authenticated by the original consumed parent.
+	TenantID identity.TenantID
+	// UserID identifies the original parent recipient, not a caller override.
+	UserID identity.UserID
+	// CapabilityID is the original consumed magic-link credential identifier.
+	CapabilityID string
+	// RequestCommandID identifies the original request that issued the parent.
+	RequestCommandID identity.CommandID
+	// PrimaryCommandID identifies the original command that consumed the parent.
+	PrimaryCommandID identity.CommandID
+	// ReplayKeyVersion identifies the retained key authenticating original replay.
+	ReplayKeyVersion uint32
+	// IssuedAt retains the parent's original signed issuance time.
+	IssuedAt time.Time
+	// NotBefore retains the parent's original signed earliest-use time.
+	NotBefore time.Time
+	// ExpiresAt retains original expiry; reconstruction cannot renew it.
+	ExpiresAt time.Time
 }
 
 // MFAMagicLinkParent retains opaque canonical-payload custody from an exact

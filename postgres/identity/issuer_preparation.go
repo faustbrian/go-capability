@@ -25,23 +25,37 @@ const maximumIssuancePreparation = 512 << 10
 // PreparationVerificationKey pins local signing-verification material and key
 // lifecycle policy. Exactly one of HMAC or Ed25519 must be populated.
 type PreparationVerificationKey struct {
-	ID        string
-	HMAC      []byte
-	Ed25519   []byte
-	Disabled  bool
-	Revoked   bool
+	// ID identifies original signing material under the codec's trusted issuer.
+	ID string
+	// HMAC supplies a nonzero 32..512-byte secret key instead of Ed25519 material.
+	// Construction copies it; the key must differ from replay and envelope keys.
+	HMAC []byte
+	// Ed25519 supplies a 32-byte public verification key instead of HMAC material.
+	Ed25519 []byte
+	// Disabled denies verification with this key in the constructed codec.
+	Disabled bool
+	// Revoked marks this retained key as revoked for original-envelope verification.
+	Revoked bool
+	// NotBefore optionally limits the key's earliest accepted verification time.
 	NotBefore time.Time
-	NotAfter  time.Time
+	// NotAfter optionally limits the key's latest accepted verification time.
+	NotAfter time.Time
 }
 
 // IssuancePreparationConfig selects local encrypted custody and verification.
 // Retain referenced keys for the original journal's entire recovery lifetime.
 type IssuancePreparationConfig struct {
-	Deployment        string
+	// Deployment binds encrypted preparation to one trusted deployment identifier.
+	Deployment string
+	// ActiveEnvelopeKey names the retained envelope key used for new checkpoints.
 	ActiveEnvelopeKey string
-	EnvelopeKeys      map[string][]byte
-	VerificationKeys  []PreparationVerificationKey
-	Clock             func() time.Time
+	// EnvelopeKeys holds 1..32 nonzero 32-byte encryption keys, copied on construction.
+	// Keep referenced keys until the original journal no longer requires recovery.
+	EnvelopeKeys map[string][]byte
+	// VerificationKeys retains 1..32 local policies for authenticating original grants.
+	VerificationKeys []PreparationVerificationKey
+	// Clock provides current trusted time locally and must support concurrent calls.
+	Clock func() time.Time
 }
 
 // IssuancePreparationCodec owns no journal, SQL connection or remote provider.
@@ -330,15 +344,38 @@ func (c *IssuancePreparationCodec) preparationContext(b identity.CommandBinding,
 	return secretenvelope.NewContext(map[string]string{"profile": "identity-capability-preparation-v1", "deployment": c.deployment, "audience": c.issuer.audience, "generation": strconv.FormatUint(generation, 10), "binding-and-plan": hex.EncodeToString(digest[:])})
 }
 
-func (PreparationVerificationKey) Format(s fmt.State, _ rune)   { _, _ = s.Write([]byte("[REDACTED]")) }
+// Format hides verification key material and lifecycle metadata.
+func (PreparationVerificationKey) Format(s fmt.State, _ rune) { _, _ = s.Write([]byte("[REDACTED]")) }
+
+// MarshalJSON rejects implicit verification-key export.
 func (PreparationVerificationKey) MarshalJSON() ([]byte, error) { return nil, invalid() }
+
+// MarshalText rejects implicit verification-key export.
 func (PreparationVerificationKey) MarshalText() ([]byte, error) { return nil, invalid() }
-func (PreparationVerificationKey) LogValue() slog.Value         { return slog.StringValue("[REDACTED]") }
-func (IssuancePreparationConfig) Format(s fmt.State, _ rune)    { _, _ = s.Write([]byte("[REDACTED]")) }
-func (IssuancePreparationConfig) MarshalJSON() ([]byte, error)  { return nil, invalid() }
-func (IssuancePreparationConfig) MarshalText() ([]byte, error)  { return nil, invalid() }
-func (IssuancePreparationConfig) LogValue() slog.Value          { return slog.StringValue("[REDACTED]") }
-func (*IssuancePreparationCodec) Format(s fmt.State, _ rune)    { _, _ = s.Write([]byte("[REDACTED]")) }
-func (*IssuancePreparationCodec) MarshalJSON() ([]byte, error)  { return nil, invalid() }
-func (*IssuancePreparationCodec) MarshalText() ([]byte, error)  { return nil, invalid() }
-func (*IssuancePreparationCodec) LogValue() slog.Value          { return slog.StringValue("[REDACTED]") }
+
+// LogValue redacts verification key material and lifecycle metadata.
+func (PreparationVerificationKey) LogValue() slog.Value { return slog.StringValue("[REDACTED]") }
+
+// Format hides envelope and verification configuration.
+func (IssuancePreparationConfig) Format(s fmt.State, _ rune) { _, _ = s.Write([]byte("[REDACTED]")) }
+
+// MarshalJSON rejects implicit custody-configuration export.
+func (IssuancePreparationConfig) MarshalJSON() ([]byte, error) { return nil, invalid() }
+
+// MarshalText rejects implicit custody-configuration export.
+func (IssuancePreparationConfig) MarshalText() ([]byte, error) { return nil, invalid() }
+
+// LogValue redacts envelope and verification configuration.
+func (IssuancePreparationConfig) LogValue() slog.Value { return slog.StringValue("[REDACTED]") }
+
+// Format hides codec keys and deployment configuration.
+func (*IssuancePreparationCodec) Format(s fmt.State, _ rune) { _, _ = s.Write([]byte("[REDACTED]")) }
+
+// MarshalJSON rejects implicit codec export.
+func (*IssuancePreparationCodec) MarshalJSON() ([]byte, error) { return nil, invalid() }
+
+// MarshalText rejects implicit codec export.
+func (*IssuancePreparationCodec) MarshalText() ([]byte, error) { return nil, invalid() }
+
+// LogValue redacts codec keys and deployment configuration.
+func (*IssuancePreparationCodec) LogValue() slog.Value { return slog.StringValue("[REDACTED]") }
