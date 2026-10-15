@@ -85,6 +85,18 @@
       "coverage_required": true,
       "build_required": true,
       "build_tags": []
+    },
+    {
+      "module_directory": "postgres/identity",
+      "directory": ".",
+      "name": "identitycapability",
+      "import_path": "github.com/faustbrian/go-capability/postgres/identity",
+      "kind": "public",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
     }
   ]
 }

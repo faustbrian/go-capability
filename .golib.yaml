@@ -14,6 +14,9 @@ mutation:
     ledger: ".verification/mutation/migration-ledger.json"
 api:
   baselines:
+  - module: "postgres/identity"
+    mode: apidiff
+    path: postgres/identity/api/baseline.txt
   - module: "."
     mode: apidiff
     path: api/baseline.txt
@@ -82,3 +85,33 @@ operations:
     benchmark: "."
     budget: 100ms
     timeout: 20m
+- module: "postgres/identity"
+  gate: local-test
+  steps:
+  - type: go-test
+    packages: ["."]
+    run: '^Test(IdentityTestPostgresConfig|NativeConsumptionIntegration|PublicCoordinatorComposition)$'
+    race: true
+    count: 1
+    timeout: 1m
+- module: "postgres/identity"
+  gate: benchmark
+  steps:
+  - type: go-test
+    packages: ["."]
+    benchmark: '^BenchmarkPrepareIdentifierConsumption$'
+    budget: 100ms
+    timeout: 2m
+- module: "postgres/identity"
+  gate: fuzz
+  steps:
+  - type: go-test
+    packages: ["."]
+    fuzz: '^FuzzMagicLinkSupersessionScope$'
+    budget: 10000x
+    timeout: 2m
+  - type: go-test
+    packages: ["."]
+    fuzz: '^FuzzIssuancePreparationRestoration$'
+    budget: 10000x
+    timeout: 2m

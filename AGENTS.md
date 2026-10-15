@@ -106,7 +106,9 @@ priority system/developer instructions remain controlling.
 - Commands MUST live under `cmd/`; private shared code MUST live under
   `internal/`; root automation MUST live under `scripts/`.
 - Public module paths MUST match their repository-relative directories beneath
-  the module path declared by the root `go.mod`.
+  the repository import root, with each module's own semantic major suffix.
+  A root module's `/v2` MUST NOT precede a nested module's directory in that
+  nested module's path; Go would resolve a different physical directory.
 - Every module MUST be declared in `modules.json`, and every package MUST be
   declared in `packages.json`.
 - Independently releasable modules MUST retain independent `go.mod` files.
