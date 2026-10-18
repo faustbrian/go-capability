@@ -15,12 +15,26 @@ import (
 // commands: original signup issuance, committed verification, and subsequent MFA
 // challenge. It conveys no current authentication, factor or session authority.
 type MFAVerificationParentBindings struct {
-	TenantID                                                    identity.TenantID
-	UserID                                                      identity.UserID
-	CapabilityID                                                string
-	RequestCommandID, VerificationCommandID, ChallengeCommandID identity.CommandID
-	ReplayKeyVersion                                            uint32
-	IssuedAt, NotBefore, ExpiresAt                              time.Time
+	// TenantID is the tenant shared by the original parent and MFA child.
+	TenantID identity.TenantID
+	// UserID is their authenticated original recipient, not current authority.
+	UserID identity.UserID
+	// CapabilityID identifies the already-consumed registration grant.
+	CapabilityID string
+	// RequestCommandID identifies the original signup issuance.
+	RequestCommandID identity.CommandID
+	// VerificationCommandID identifies the separately committed parent use.
+	VerificationCommandID identity.CommandID
+	// ChallengeCommandID identifies the subsequent pending MFA issuance.
+	ChallengeCommandID identity.CommandID
+	// ReplayKeyVersion retains the parent's original replay-key identity.
+	ReplayKeyVersion uint32
+	// IssuedAt is the original parent grant's signed issuance time.
+	IssuedAt time.Time
+	// NotBefore is its original signed lower validity bound.
+	NotBefore time.Time
+	// ExpiresAt is its original signed deadline, never renewed by this read.
+	ExpiresAt time.Time
 }
 
 // MFAVerificationParent owns opaque original-payload custody. It cannot be used
