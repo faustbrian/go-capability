@@ -18,11 +18,33 @@ import (
 // challenge scope. Retain original encrypted custody across retries; never sign
 // replacements to resolve unknown commit. Restoration cannot renew disclosure.
 func (i *Issuer) PrepareMFAContinuation(ctx context.Context, b identity.CommandBinding, input capability.Payload) (PreparedIssuance, error) {
-	if !mfaIssuancePayload(input) {
+	if !mfaIssuancePayload(input) || b.OperationID != "identity.magic-link.consume" && b.OperationID != "identity.password.signin" {
 		return PreparedIssuance{}, invalid()
 	}
 	plan := identitypostgres.CapabilityIssuancePlan{MFAContinuationUserID: identity.UserID(input.Subject)}
 	return i.preparePlan(ctx, b, plan, []capability.Payload{input}, true)
+}
+
+// PrepareVerificationMFAContinuation signs one original challenge for the
+// explicit recipient of a separately committed registration verification.
+// Binding retains that confirmation's command ID in RecordID, not an anonymous
+// primary or a same-transaction consumption. Structural checks do not prove the
+// parent or browser; the exact native owner must fence both before kernel
+// staging. This bounded call performs no SQL, authentication or session issuance.
+// Retain encrypted preparation across retries; restore original bytes without
+// extending expiry or signing replacements after an unknown commit.
+func (i *Issuer) PrepareVerificationMFAContinuation(ctx context.Context, b identity.CommandBinding, input capability.Payload) (PreparedIssuance, error) {
+	if !verificationMFAIssuerBinding(b, identity.UserID(input.Subject)) || !mfaIssuancePayload(input) || input.CorrelationID != b.RecordID {
+		return PreparedIssuance{}, invalid()
+	}
+	plan := identitypostgres.CapabilityIssuancePlan{MFAContinuationUserID: b.UserID}
+	return i.preparePlan(ctx, b, plan, []capability.Payload{input}, true)
+}
+
+func verificationMFAIssuerBinding(b identity.CommandBinding, user identity.UserID) bool {
+	op := identity.FeatureOperation{Owner: "identity/email", OperationID: "identity.email.verification-signin", SchemaID: "email-verification-signin", SchemaVersion: 1, RecordRequirement: identity.FeatureRecordRequired}
+	_, err := identity.ParseCommandID(b.RecordID)
+	return err == nil && b.RecordID != string(b.CommandID) && b.UserID == user && issuerText(string(user)) && b.AnonymousFlowID == "" && b.ValidateFor(op) == nil
 }
 
 func mfaIssuancePayload(p capability.Payload) bool {

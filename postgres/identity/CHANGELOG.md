@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Preserve separately consumed registration-verification parent custody for
+  explicitly selected TOTP challenges. Protected completion repeats original
+  grant and committed-history checks without consuming the parent again.
+
 - Expose exact-target verification-grant retirement only within the original
   kernel-prepared email-removal Apply. Preserve reserved/consumed provenance
   and deny live unclassified legacy grants rather than guessing their target.

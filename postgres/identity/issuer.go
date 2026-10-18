@@ -545,6 +545,9 @@ func issuerSubject(b identity.CommandBinding, registration identity.UserID) (ide
 // historical rules intact and bind the independent existing-recipient profile.
 func issuerPlanSubject(b identity.CommandBinding, p identitypostgres.CapabilityIssuancePlan) (identity.UserID, bool) {
 	if p.MFAContinuationUserID != "" {
+		if b.OperationID == "identity.email.verification-signin" {
+			return p.MFAContinuationUserID, p.RegistrationUserID == "" && p.ResetRecipientUserID == "" && p.MagicLinkRecipientUserID == "" && verificationMFAIssuerBinding(b, p.MFAContinuationUserID)
+		}
 		op := identity.FeatureOperation{Owner: "identity/magiclink", OperationID: "identity.magic-link.consume", SchemaID: "magic-link-consume", SchemaVersion: 1, RecordRequirement: identity.FeatureRecordOmitted, SubjectRequirement: identity.FeatureSubjectAnonymousFlow}
 		if b.OperationID == "identity.password.signin" {
 			op.Owner, op.OperationID, op.SchemaID = "identity/password", "identity.password.signin", "password-signin"

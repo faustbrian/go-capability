@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -50,10 +51,19 @@ type MFAMagicLinkParentBindings struct {
 // primary credential is recovered, recreated, signed or retained.
 type MFAMagicLinkParent struct {
 	bindings              MFAMagicLinkParentBindings
+	challenge             identity.CommandID
+	parentEnvelope        [32]byte
+	child                 mfaParentChild
 	payload, supersession [32]byte
 	issuer, audience      string
 	limits                capability.Limits
 	valid                 bool
+}
+
+type mfaParentChild struct {
+	id                string
+	envelope, payload [32]byte
+	issued, expires   time.Time
 }
 
 // Bindings projects immutable historical routing/times, not decoded payload
@@ -72,9 +82,13 @@ func (p MFAMagicLinkParent) Bindings() (MFAMagicLinkParentBindings, error) {
 // Success authenticates historical metadata only; protected execution must
 // repeat its current account/factor/browser/child authority checks.
 func (p MFAMagicLinkParent) MatchPayload(v capability.Payload) error {
+	return p.matchPayload(v, "identity.magic-link.consume")
+}
+
+func (p MFAMagicLinkParent) matchPayload(v capability.Payload, purpose capability.Purpose) error {
 	deny := identity.ForbiddenError{}
 	b := p.bindings
-	if !p.valid || v.Version != 1 || v.Bearer || v.MaxUses != 1 || v.ID != b.CapabilityID || v.Tenant != string(b.TenantID) || v.Subject != string(b.UserID) || v.Operation != "identity.magic-link.consume" || v.CorrelationID != string(b.RequestCommandID) || v.Issuer != p.issuer || len(v.Audiences) != 1 || v.Audiences[0] != p.audience || !v.IssuedAt.Equal(b.IssuedAt) || !v.NotBefore.Equal(b.NotBefore) || !v.ExpiresAt.Equal(b.ExpiresAt) {
+	if !p.valid || v.Version != 1 || v.Bearer || v.MaxUses != 1 || v.ID != b.CapabilityID || v.Tenant != string(b.TenantID) || v.Subject != string(b.UserID) || v.Operation != string(purpose) || purpose == "identity.magic-link.consume" && (v.CorrelationID != string(b.RequestCommandID) || len(v.Audiences) != 1 || v.Audiences[0] != p.audience) || v.Issuer != p.issuer || len(v.Audiences) != 1 || !v.IssuedAt.Equal(b.IssuedAt) || !v.NotBefore.Equal(b.NotBefore) || !v.ExpiresAt.Equal(b.ExpiresAt) {
 		return deny
 	}
 	if p.supersession != ([32]byte{}) {
@@ -114,6 +128,10 @@ func (p MFAMagicLinkParent) MatchPayload(v capability.Payload) error {
 // storage/verification returns Unavailable. Cancellation remains typed. Every
 // error returns zero custody and reveals no SQL, credential or correlated data.
 func (i *Issuer) ReadMFAMagicLinkParent(ctx context.Context, pool *database.Pool, child capability.Proof, parentID string, parentEnvelope [32]byte, parentExpiry time.Time) (out MFAMagicLinkParent, err error) {
+	return i.readMFAParent(ctx, pool, child, parentID, parentEnvelope, parentExpiry, false)
+}
+
+func (i *Issuer) readMFAParent(ctx context.Context, pool *database.Pool, child capability.Proof, parentID string, parentEnvelope [32]byte, parentExpiry time.Time, verification bool) (out MFAMagicLinkParent, err error) {
 	if i == nil || i.service == nil || ctx == nil || pool == nil || pool.Raw() == nil || parentEnvelope == ([32]byte{}) || parentExpiry.IsZero() {
 		return out, invalid()
 	}
@@ -152,7 +170,7 @@ func (i *Issuer) ReadMFAMagicLinkParent(ctx context.Context, pool *database.Pool
 	var replayVersion int64
 	var issued, notBefore, expires time.Time
 	var payload, scope []byte
-	err = pool.Raw().QueryRow(ctx, `SELECT p.origin_command_id,p.replay_key_version,p.signed_issued_at,p.signed_not_before,p.expires_at,p.payload_digest,p.supersession_scope
+	query := `SELECT p.origin_command_id,p.replay_key_version,p.signed_issued_at,p.signed_not_before,p.expires_at,p.payload_digest,p.supersession_scope
 FROM public.capability_identity_one_use c
 JOIN public.capability_identity_one_use p ON p.tenant_id=c.tenant_id
  AND p.purpose='identity.magic-link.consume' AND p.capability_id=$4
@@ -168,7 +186,19 @@ WHERE c.tenant_id=$1 AND c.purpose='identity.mfa.complete' AND c.capability_id=$
  AND p.signed_not_before<=c.signed_issued_at
  AND p.state='finalized' AND p.uses=p.max_uses AND p.max_uses=1
  AND p.origin_command_id IS NOT NULL AND p.origin_command_id<>c.origin_command_id
- AND p.superseded_by_command_id IS NULL`, v.Tenant, v.ID, string(primary), parentID, v.Subject, envelope[:], childDigest[:], v.IssuedAt, v.ExpiresAt, parentEnvelope[:], parentExpiry).Scan(&request, &replayVersion, &issued, &notBefore, &expires, &payload, &scope)
+ AND p.superseded_by_command_id IS NULL`
+	args := []any{v.Tenant, v.ID, string(primary), parentID, v.Subject, envelope[:], childDigest[:], v.IssuedAt, v.ExpiresAt, parentEnvelope[:], parentExpiry}
+	consumer := primary
+	if verification {
+		consumer, err = identity.ParseCommandID(v.CorrelationID)
+		if err != nil || consumer == primary {
+			return out, identity.ForbiddenError{}
+		}
+		consumerBytes, _ := base64.RawURLEncoding.Strict().DecodeString(string(consumer))
+		query = mfaVerificationParentSQL
+		args = append(args, consumerBytes, string(consumer))
+	}
+	err = pool.Raw().QueryRow(ctx, query, args...).Scan(&request, &replayVersion, &issued, &notBefore, &expires, &payload, &scope)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			err = identity.ForbiddenError{}
@@ -178,13 +208,16 @@ WHERE c.tenant_id=$1 AND c.purpose='identity.mfa.complete' AND c.capability_id=$
 		return out, err
 	}
 	requestID, e := identity.ParseCommandID(request)
-	if e != nil || replayVersion < 1 || replayVersion > math.MaxUint32 || len(payload) != 32 || len(scope) != 0 && len(scope) != 32 || issued.IsZero() || !expires.After(issued) || notBefore.Before(issued) || !expires.After(notBefore) {
+	if e != nil || replayVersion < 1 || replayVersion > math.MaxUint32 || len(payload) != 32 || len(scope) != 0 && (verification || len(scope) != 32) || issued.IsZero() || !expires.After(issued) || notBefore.Before(issued) || !expires.After(notBefore) {
 		return out, identity.ForbiddenError{}
 	}
 	if i.keys[uint32(replayVersion)] == ([32]byte{}) {
 		return out, identity.UnavailableError{}
 	}
-	out.bindings = MFAMagicLinkParentBindings{TenantID: identity.TenantID(v.Tenant), UserID: identity.UserID(v.Subject), CapabilityID: parentID, RequestCommandID: requestID, PrimaryCommandID: primary, ReplayKeyVersion: uint32(replayVersion), IssuedAt: issued, NotBefore: notBefore, ExpiresAt: expires}
+	out.bindings = MFAMagicLinkParentBindings{TenantID: identity.TenantID(v.Tenant), UserID: identity.UserID(v.Subject), CapabilityID: parentID, RequestCommandID: requestID, PrimaryCommandID: consumer, ReplayKeyVersion: uint32(replayVersion), IssuedAt: issued, NotBefore: notBefore, ExpiresAt: expires}
+	out.challenge = primary
+	out.parentEnvelope = parentEnvelope
+	out.child = mfaParentChild{id: v.ID, envelope: envelope, payload: childDigest, issued: v.IssuedAt, expires: v.ExpiresAt}
 	copy(out.payload[:], payload)
 	copy(out.supersession[:], scope)
 	if out.payload == ([32]byte{}) || len(scope) == 32 && out.supersession == ([32]byte{}) {
