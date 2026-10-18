@@ -82,3 +82,33 @@ func TestRegistrationIssuerRejectsForeignProfiles(t *testing.T) {
 		}
 	}
 }
+
+func TestUsernameRegistrationIssuerRetainsDistinctOriginalOrigin(t *testing.T) {
+	i, _, binding, payload := issuerFixture(t)
+	b := registrationIssuerBinding(binding)
+	b.OperationID, b.SchemaID = "identity.username.signup", "username-signup"
+	payload.Subject = "new-user"
+	prepared, err := i.PrepareRegistration(context.Background(), b, "new-user", []capability.Payload{payload})
+	if err != nil {
+		t.Fatal("username origin cannot use existing registration issuer", err)
+	}
+	plan, err := prepared.Plan()
+	if err != nil || prepared.state.binding != b || plan.RegistrationUserID != "new-user" || i.ValidateCapabilityIssuance(b, plan) != nil {
+		t.Fatal("issuer relabeled or lost original username registration", err)
+	}
+	if _, err := i.Prepare(context.Background(), b, []capability.Payload{payload}); err == nil {
+		t.Fatal("ordinary issuer acquired anonymous registration authority")
+	}
+	for _, mutate := range []func(*identity.CommandBinding){
+		func(b *identity.CommandBinding) { b.SchemaID = "password-signup" },
+		func(b *identity.CommandBinding) { b.OperationID = "identity.username.signin" },
+		func(b *identity.CommandBinding) { b.SchemaVersion++ },
+		func(b *identity.CommandBinding) { b.UserID = "new-user" },
+	} {
+		wrong := b
+		mutate(&wrong)
+		if _, err := i.PrepareRegistration(context.Background(), wrong, "new-user", []capability.Payload{payload}); err == nil {
+			t.Fatal("cross-profile registration origin accepted")
+		}
+	}
+}

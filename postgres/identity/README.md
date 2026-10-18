@@ -22,6 +22,14 @@ only to its own consumption tables, never this adapter's identity tables.
 
 ## Quick start and API
 
+`PrepareRegistration` accepts the exact anonymous `identity.password.signup`
+(`password-signup`, v1) or `identity.username.signup` (`username-signup`, v1)
+origin. It preserves the original operation/schema throughout preparation and
+recovery. A username route cannot impersonate a password origin or vice versa.
+This is unsigned-workflow composition, not registration authority: the existing
+kernel must still prove actual identity creation and stage the grant in its
+single protected transaction. Ordinary `Prepare` has no anonymous override.
+
 `PrepareOrganizationInvitationConsumption` authenticates an original invitation
 proof for `identity.organization.invitation.accept`. Supply the authenticated
 retained envelope, replay-key version and `OrganizationInvitationScope` from

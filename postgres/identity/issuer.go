@@ -538,6 +538,9 @@ func issuerSubject(b identity.CommandBinding, registration identity.UserID) (ide
 		return b.UserID, issuerBinding(b)
 	}
 	op := identity.FeatureOperation{Owner: "identity/password", OperationID: "identity.password.signup", SchemaID: "password-signup", SchemaVersion: 1, RecordRequirement: identity.FeatureRecordOmitted, SubjectRequirement: identity.FeatureSubjectAnonymousFlow}
+	if b.OperationID == "identity.username.signup" {
+		op.Owner, op.OperationID, op.SchemaID = "identity/username", "identity.username.signup", "username-signup"
+	}
 	return registration, issuerText(string(registration)) && b.UserID == "" && b.AnonymousFlowID != "" && b.ValidateFor(op) == nil
 }
 

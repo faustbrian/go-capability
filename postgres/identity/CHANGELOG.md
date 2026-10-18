@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Permit the exact username-signup origin to prepare a registration-verification
+  grant without relabeling its command. Preserve existing password origins and
+  deny mixed schemas or ordinary anonymous subject overrides; the native kernel
+  still owns same-transaction identity creation and issuance.
+
 - Prepare original organization-invitation proof consumption with exact signed
   recipient, organization, role and identifier-version scope. Preserve original
   envelope, expiry and retained replay identity without consuming or granting
