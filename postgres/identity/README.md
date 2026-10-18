@@ -90,8 +90,10 @@ the existing Participant consumes proof atomically with the protected effect.
 This seam does not issue sessions or provide a primary-address change workflow.
 
 `issuer.PrepareMFAContinuation(ctx, consumeBinding, payload)` signs one
-`identity.mfa.complete` child for the closed anonymous magic-link consumption
-profile. Supply the canonical challenge ID and exact MFA profile/scope caveats
+`identity.mfa.complete` child for the closed anonymous magic-link consumption,
+password-signin or username-signin profile. Each retains its exact original
+operation and schema; encrypted restoration never converts one into another.
+Supply the canonical challenge ID and exact MFA profile/scope caveats
 already frozen by the native owner. The child is bounded to five minutes;
 kernel staging additionally enforces the original primary expiry and complete
 scope. This method grants no factor or session authority. Original encrypted

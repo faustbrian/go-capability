@@ -93,20 +93,29 @@ func TestMFAIssuerPreservesChallengeIDAndEncryptedCustody(t *testing.T) {
 }
 
 func TestMFAIssuerAdmitsOnlyClosedPasswordSigninOrigin(t *testing.T) {
+	testMFAIssuerClosedSigninOrigin(t, "identity.password.signin", "password-signin")
+}
+
+func TestMFAIssuerAdmitsOnlyClosedUsernameSigninOrigin(t *testing.T) {
+	testMFAIssuerClosedSigninOrigin(t, "identity.username.signin", "username-signin")
+}
+
+func testMFAIssuerClosedSigninOrigin(t *testing.T, operation, schema string) {
+	t.Helper()
 	i, config, binding, payload := issuerFixture(t)
 	b := magicLinkIssuerBinding(binding)
-	b.OperationID, b.SchemaID = "identity.password.signin", "password-signin"
+	b.OperationID, b.SchemaID = operation, schema
 	payload.ID, payload.Subject, payload.Operation = "AQEBAQEBAQEBAQEBAQEBAQ", "existing-user", "identity.mfa.complete"
 	payload.Resource = "mfa/continuations/" + payload.ID
 	payload.IssuedAt, payload.NotBefore = config.Crypto.Clock(), config.Crypto.Clock()
 	payload.Caveats = map[string]string{"mfa.profile": "identity-mfa-continuation-v1", "mfa.scope": strings.Repeat("07", 32)}
 	issued, err := i.PrepareMFAContinuation(context.Background(), b, payload)
 	if err != nil {
-		t.Fatal("genuine password origin denied", err)
+		t.Fatal("genuine signin origin denied", err)
 	}
 	plan, err := issued.Plan()
 	if err != nil || plan.MFAContinuationUserID != identity.UserID(payload.Subject) || plan.Grants[0].CapabilityID != payload.ID || issued.state.binding != b {
-		t.Fatal("password origin retargeted", err)
+		t.Fatal("signin origin retargeted", err)
 	}
 	codec, _ := preparationFixture(t, i, config)
 	wire, err := codec.CheckpointPreparation(context.Background(), issued, 1, nil)
@@ -114,12 +123,21 @@ func TestMFAIssuerAdmitsOnlyClosedPasswordSigninOrigin(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := codec.RestorePreparation(context.Background(), b, 1, plan, wire); err != nil {
-		t.Fatal("original password child cannot restart", err)
+		t.Fatal("original signin child cannot restart", err)
 	}
-	foreign := b
-	foreign.OperationID, foreign.SchemaID = "identity.magic-link.consume", "magic-link-consume"
-	if _, err := codec.RestorePreparation(context.Background(), foreign, 1, plan, wire); err == nil {
-		t.Fatal("password child restored under magic-link origin")
+	for _, origin := range [][2]string{
+		{"identity.magic-link.consume", "magic-link-consume"},
+		{"identity.password.signin", "password-signin"},
+		{"identity.username.signin", "username-signin"},
+	} {
+		if origin[0] == operation {
+			continue
+		}
+		foreign := b
+		foreign.OperationID, foreign.SchemaID = origin[0], origin[1]
+		if _, err := codec.RestorePreparation(context.Background(), foreign, 1, plan, wire); err == nil {
+			t.Fatal("signin child restored under another primary origin")
+		}
 	}
 	for _, change := range []func(*identity.CommandBinding){
 		func(b *identity.CommandBinding) { b.SchemaID = "magic-link-consume" },
@@ -130,7 +148,7 @@ func TestMFAIssuerAdmitsOnlyClosedPasswordSigninOrigin(t *testing.T) {
 		bad := b
 		change(&bad)
 		if _, err := i.PrepareMFAContinuation(context.Background(), bad, payload); err == nil {
-			t.Fatal("foreign anonymous password profile admitted")
+			t.Fatal("foreign anonymous signin profile admitted")
 		}
 	}
 }

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Admit the exact username-signin origin for original MFA child issuance.
+  Preserve its distinct command/schema and encrypted restoration binding;
+  password and magic-link preparations cannot be restored as username signin.
+  This adds no authentication or session authority and needs no migration.
+
 - Permit the exact username-signup origin to prepare a registration-verification
   grant without relabeling its command. Preserve existing password origins and
   deny mixed schemas or ordinary anonymous subject overrides; the native kernel

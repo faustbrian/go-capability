@@ -555,6 +555,9 @@ func issuerPlanSubject(b identity.CommandBinding, p identitypostgres.CapabilityI
 		if b.OperationID == "identity.password.signin" {
 			op.Owner, op.OperationID, op.SchemaID = "identity/password", "identity.password.signin", "password-signin"
 		}
+		if b.OperationID == "identity.username.signin" {
+			op.Owner, op.OperationID, op.SchemaID = "identity/username", "identity.username.signin", "username-signin"
+		}
 		return p.MFAContinuationUserID, p.RegistrationUserID == "" && p.ResetRecipientUserID == "" && p.MagicLinkRecipientUserID == "" && issuerText(string(p.MFAContinuationUserID)) && b.UserID == "" && b.AnonymousFlowID != "" && b.ValidateFor(op) == nil
 	}
 	if p.MagicLinkRecipientUserID != "" {
