@@ -17,10 +17,15 @@ import (
 // ASCII identifiers. The organization owner alone decides whether that role is
 // currently permitted. Copies are immutable and safe for concurrent reads.
 type OrganizationInvitationScope struct {
-	OrganizationID             string
-	InvitationVersion          uint64
-	Role                       string
-	RecipientIdentifierID      identity.IdentifierID
+	// OrganizationID identifies the organization bound by original issuance.
+	OrganizationID string
+	// InvitationVersion is the positive version signed into the invitation.
+	InvitationVersion uint64
+	// Role is the exact signed role; current role admission remains external.
+	Role string
+	// RecipientIdentifierID identifies the originally verified recipient.
+	RecipientIdentifierID identity.IdentifierID
+	// RecipientIdentifierVersion binds that recipient's original version.
 	RecipientIdentifierVersion uint64
 }
 
