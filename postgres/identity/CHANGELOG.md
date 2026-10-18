@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Prepare original organization-invitation proof consumption with exact signed
+  recipient, organization, role and identifier-version scope. Preserve original
+  envelope, expiry and retained replay identity without consuming or granting
+  membership; native invitation transaction admission remains separately owned.
+
 - Preserve separately consumed registration-verification parent custody for
   explicitly selected TOTP challenges. Protected completion repeats original
   grant and committed-history checks without consuming the parent again.

@@ -22,6 +22,18 @@ only to its own consumption tables, never this adapter's identity tables.
 
 ## Quick start and API
 
+`PrepareOrganizationInvitationConsumption` authenticates an original invitation
+proof for `identity.organization.invitation.accept`. Supply the authenticated
+retained envelope, replay-key version and `OrganizationInvitationScope` from
+the original durable invitation; never use client-selected expected metadata.
+It binds the signed recipient, invitation resource, organization, role, versions,
+trusted issuer and single configured audience. It returns only preparation
+metadata: no consumption, membership, delivery, expiry renewal or transaction.
+The organization owner must still fence current verified-recipient and session
+authority, policy and limits and consume atomically with membership/audit effects
+through the sole identity coordinator. The existing native coordinator must
+support that closed invitation profile before this preparation can be executed.
+
 `IssuerConfig.RetainEmailVerificationTargets` explicitly selects migration 005.
 It retains the exact authenticated signed identifier resource during the same
 original issuance transaction, including signup and unselected managed links.
