@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Admit the exact anonymous phone-password-signin origin for original MFA child
+  issuance. Preserve its browser, operation/schema and encrypted restoration
+  binding; other primary origins and known-user overrides cannot select it.
+  This adds no authentication or session authority and needs no migration.
+
 - Prepare canonical phone-password-reset capability consumption directly from
   the exact sealed joint input or generated command. Preserve original replay
   key, envelope, absolute expiry and password/SMS/TOTP/browser custody without

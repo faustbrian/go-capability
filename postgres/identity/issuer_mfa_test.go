@@ -100,6 +100,10 @@ func TestMFAIssuerAdmitsOnlyClosedUsernameSigninOrigin(t *testing.T) {
 	testMFAIssuerClosedSigninOrigin(t, "identity.username.signin", "username-signin")
 }
 
+func TestMFAIssuerAdmitsOnlyClosedPhonePasswordSigninOrigin(t *testing.T) {
+	testMFAIssuerClosedSigninOrigin(t, "identity.phone.password-signin", "phone-password-signin")
+}
+
 func testMFAIssuerClosedSigninOrigin(t *testing.T, operation, schema string) {
 	t.Helper()
 	i, config, binding, payload := issuerFixture(t)
@@ -117,18 +121,26 @@ func testMFAIssuerClosedSigninOrigin(t *testing.T, operation, schema string) {
 	if err != nil || plan.MFAContinuationUserID != identity.UserID(payload.Subject) || plan.Grants[0].CapabilityID != payload.ID || issued.state.binding != b {
 		t.Fatal("signin origin retargeted", err)
 	}
+	if err := i.ValidateCapabilityIssuance(b, plan); err != nil {
+		t.Fatal("original signin declaration rejected", err)
+	}
+	if out, err := i.Prepare(context.Background(), b, []capability.Payload{payload}); err == nil || out.state != nil {
+		t.Fatal("ordinary issuance selected anonymous signin subject")
+	}
 	codec, _ := preparationFixture(t, i, config)
 	wire, err := codec.CheckpointPreparation(context.Background(), issued, 1, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := codec.RestorePreparation(context.Background(), b, 1, plan, wire); err != nil {
-		t.Fatal("original signin child cannot restart", err)
+	restored, err := codec.RestorePreparation(context.Background(), b, 1, plan, wire)
+	if err != nil || restored.state == nil || restored.state.binding != b || restored.state.grants[0].EnvelopeDigest() != plan.Grants[0].ProofFingerprint || restored.state.grants[0].Payload().ID != payload.ID || restored.state.grants[0].Payload().ExpiresAt != payload.ExpiresAt {
+		t.Fatal("original signin child identity, browser or expiry changed", err)
 	}
 	for _, origin := range [][2]string{
 		{"identity.magic-link.consume", "magic-link-consume"},
 		{"identity.password.signin", "password-signin"},
 		{"identity.username.signin", "username-signin"},
+		{"identity.phone.password-signin", "phone-password-signin"},
 	} {
 		if origin[0] == operation {
 			continue
@@ -142,6 +154,9 @@ func testMFAIssuerClosedSigninOrigin(t *testing.T, operation, schema string) {
 	for _, change := range []func(*identity.CommandBinding){
 		func(b *identity.CommandBinding) { b.SchemaID = "magic-link-consume" },
 		func(b *identity.CommandBinding) { b.OperationID = "identity.password.reset-complete" },
+		func(b *identity.CommandBinding) { b.OperationID = "identity.phone.password-signin.foreign" },
+		func(b *identity.CommandBinding) { b.SchemaVersion++ },
+		func(b *identity.CommandBinding) { b.RecordID = string(b.CommandID) },
 		func(b *identity.CommandBinding) { b.UserID = "existing-user" },
 		func(b *identity.CommandBinding) { b.AnonymousFlowID = "" },
 	} {
@@ -150,5 +165,17 @@ func testMFAIssuerClosedSigninOrigin(t *testing.T, operation, schema string) {
 		if _, err := i.PrepareMFAContinuation(context.Background(), bad, payload); err == nil {
 			t.Fatal("foreign anonymous signin profile admitted")
 		}
+		if _, err := codec.RestorePreparation(context.Background(), bad, 1, plan, wire); err == nil {
+			t.Fatal("foreign anonymous signin profile restored")
+		}
+	}
+	foreignBrowser := b
+	otherBrowser, err := identity.NewCommandID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	foreignBrowser.AnonymousFlowID = string(otherBrowser)
+	if _, err := codec.RestorePreparation(context.Background(), foreignBrowser, 1, plan, wire); err == nil {
+		t.Fatal("signin child restored under another browser")
 	}
 }

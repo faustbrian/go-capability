@@ -11,15 +11,15 @@ import (
 )
 
 // PrepareMFAContinuation signs one original challenge under an anonymous
-// magic-link consume, password-signin or username-signin command. The native
-// owner allocates the canonical ID and freezes the full scope before this
-// bounded call; this method preserves
-// that ID, scope and expiry. It performs no SQL, consumption or authentication.
+// magic-link consume, password-signin, username-signin or phone-password-signin
+// command. The native owner allocates the canonical ID and freezes the full
+// scope before this bounded call; this method preserves that ID, scope and
+// expiry. It performs no SQL, consumption or authentication.
 // Kernel staging still requires the same-Work native primary and exact frozen
 // challenge scope. Retain original encrypted custody across retries; never sign
 // replacements to resolve unknown commit. Restoration cannot renew disclosure.
 func (i *Issuer) PrepareMFAContinuation(ctx context.Context, b identity.CommandBinding, input capability.Payload) (PreparedIssuance, error) {
-	if !mfaIssuancePayload(input) || b.OperationID != "identity.magic-link.consume" && b.OperationID != "identity.password.signin" && b.OperationID != "identity.username.signin" {
+	if !mfaIssuancePayload(input) || b.OperationID != "identity.magic-link.consume" && b.OperationID != "identity.password.signin" && b.OperationID != "identity.username.signin" && b.OperationID != "identity.phone.password-signin" {
 		return PreparedIssuance{}, invalid()
 	}
 	plan := identitypostgres.CapabilityIssuancePlan{MFAContinuationUserID: identity.UserID(input.Subject)}
