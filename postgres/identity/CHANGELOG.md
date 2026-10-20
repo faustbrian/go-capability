@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Prepare canonical phone-password-reset capability consumption directly from
+  the exact sealed joint input or generated command. Preserve original replay
+  key, envelope, absolute expiry and password/SMS/TOTP/browser custody without
+  converting the phone profile into emailed reset. Existing user-bound issuance
+  and coordinator-only one-use storage remain the owners; no migration is needed.
+
 - Admit the exact username-signin origin for original MFA child issuance.
   Preserve its distinct command/schema and encrypted restoration binding;
   password and magic-link preparations cannot be restored as username signin.

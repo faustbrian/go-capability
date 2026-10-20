@@ -196,6 +196,29 @@ grant, keyed replay identity and originating-command rows are all absent;
 conflicting evidence remains unknown. Neither preparation nor origin inspection
 implements resend/supersession, factor policy, consume or session orchestration.
 
+`issuer.PreparePhonePasswordResetConsumption(ctx, originalJointResetCommand,
+originalReplayVersion)` authenticates only the canonical capability retained in
+the sealed `PhonePasswordResetInputFeature`/`InputCustody` or generated
+`PhonePasswordResetFeature`/`Custody` command. It requires the exact
+`identity/phone` / `identity.phone.password-reset-complete` /
+`identity.phone.password-reset-complete.native-v1` version-one descriptor.
+The signed `identity.password/<credentialID>` resource, tenant, user, audience
+and one-use limit must match. No externally supplied replacement proof or
+generic/single-code conversion is accepted; original password/hash, capability,
+SMS, independent TOTP and browser-cookie custody remain together unchanged.
+The original retained replay-key version and absolute expiry are preserved.
+
+Phone issuance uses the existing user-bound `Issuer.Prepare` owner with the
+canonical `identity.phone.password-reset-complete` payload. It does not borrow
+the email-only anonymous `ResetRecipientUserID` profile. The native service must
+resolve and fence the actual phone/password/factor/browser scope; issuance and
+encrypted restoration alone do not prove recovery eligibility. Consumption
+preparation does not sign, transfer, reserve, consume or begin a transaction.
+The existing Participant and sole identity coordinator must consume capability,
+OTP and risk atomically with canonical password replacement and required
+session effects.
+These adapter seams do not establish complete phone recovery acceptance.
+
 `issuer.PreparePasswordResetConsumption(ctx, originalResetCommand,
 originalReplayVersion)` derives a one-use consumption plan directly from the
 paired opaque proof retained by `identity.NewFeaturePasswordResetInputCommand`
