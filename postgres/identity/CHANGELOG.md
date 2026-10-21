@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Prepare exact original anonymous-upgrade proof consumption, binding the guest,
+  permanent target, both sessions, source version, merge and remember profile.
+  Preserve original envelope, replay identity and signed expiry within the guest
+  lifetime. This grants no credential/session authority and adds no migration;
+  existing native owners and the sole coordinator retain atomic consumption.
+
 - Admit the exact anonymous phone-password-signin origin for original MFA child
   issuance. Preserve its browser, operation/schema and encrypted restoration
   binding; other primary origins and known-user overrides cannot select it.

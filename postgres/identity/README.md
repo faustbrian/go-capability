@@ -22,6 +22,21 @@ only to its own consumption tables, never this adapter's identity tables.
 
 ## Quick start and API
 
+`PrepareAnonymousUpgradeConsumption` reauthenticates the original signed proof
+for `identity.anonymous.upgrade` / `identity.anonymous.upgrade.native-v1` v1.
+The user actor and subject are the permanent target; the distinct record is the
+guest. Supply `AnonymousUpgradeScope`, original envelope and retained replay-key
+version from authenticated original native preparation, never HTTP assertions.
+Exactly five signed `anonymous.*` caveats bind the source version, both original
+session IDs, canonical merge digest and session/persistent remember selection.
+The signed expiry cannot exceed the original guest's positive UTC microsecond
+expiry. Original fingerprint, replay identity and signed expiry are preserved.
+This is read-only metadata preparation: no signing, SQL, consumption or renewal.
+It cannot substitute for current action-bound target credential proof from the
+native password `ActionPrimarySource`. Native identity/session owners must still
+prove current guest, target, sessions, merge and policy and use the existing
+capability participant atomically with all effects in the sole coordinator.
+
 `PrepareRegistration` accepts the exact anonymous `identity.password.signup`
 (`password-signup`, v1) or `identity.username.signup` (`username-signup`, v1)
 origin. It preserves the original operation/schema throughout preparation and
