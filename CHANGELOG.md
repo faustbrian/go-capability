@@ -5,6 +5,12 @@ the module follows semantic versioning.
 
 ## [Unreleased]
 
+### Security
+
+- Select Go 1.27.3 for verification and runtime builds to include the
+  `crypto/x509` compromised-intermediate distrust fix for GO-2026-6809.
+  Consumers must also build with a patched Go toolchain.
+
 ### Added
 
 - Add opaque identity proof custody, exact purpose/reference contracts and a

@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "repository": "github.com/faustbrian/go-capability",
-  "go_version": "1.27.2",
+  "go_version": "1.27.3",
   "modules": [
     {
       "directory": ".",
@@ -298,7 +298,7 @@
         "optional_owned_dependencies": [],
         "adapters": [],
         "companions": [],
-        "supported_go": {"minimum": "1.27.0", "tested": ["1.27.2"]},
+        "supported_go": {"minimum": "1.27.0", "tested": ["1.27.3"]},
         "supported_platforms": ["portable-go"],
         "supported_backends": ["postgresql"],
         "supported_protocols": [],

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Use the patched Go 1.27.3 verification toolchain for GO-2026-6809 in
+  `crypto/x509`; consumers must also use a patched Go build toolchain.
+
 - Prepare exact original anonymous-upgrade proof consumption, binding the guest,
   permanent target, both sessions, source version, merge and remember profile.
   Preserve original envelope, replay identity and signed expiry within the guest

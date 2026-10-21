@@ -36,7 +36,7 @@ that hide a failing package.
 
 ## Verification
 
-Use Go 1.27.2 for verification; the module/API minimum remains Go 1.27.0.
+Use Go 1.27.3 for verification; the module/API minimum remains Go 1.27.0.
 An isolated checkout needs no sibling repositories or coordination goal files.
 Begin with deterministic tests and one active target when its parser boundary
 changes, using a disposable cache for each bounded session:
