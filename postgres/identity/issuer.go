@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/faustbrian/go-authorization/v3"
 	"github.com/faustbrian/go-capability/v2"
 	identity "github.com/faustbrian/go-identity"
 	identitypostgres "github.com/faustbrian/go-identity/postgres"
@@ -446,10 +447,11 @@ func (i *Issuer) PersistCapabilityIssuance(ctx context.Context, w identitypostgr
 
 // RecoverParticipant reads original issuance evidence under the coordinator's
 // frozen prior generation. Missing, partial or conflicting ordinary/signup
-// rows remain unknown. The exact single-grant reset-request profile can prove
-// non-commit only when neither original identity nor replay identity nor any
-// grant of that originating command exists under the coordinator recovery
-// fence. No expiry, timeout or consuming state is rewritten as rollback.
+// rows remain unknown. Selected single-grant recipient and native anonymous-
+// upgrade preparation profiles can prove non-commit only when neither original
+// identity nor replay identity nor any grant of that originating command exists
+// under the coordinator recovery fence. No expiry, timeout or consuming state
+// is rewritten as rollback.
 func (i *Issuer) RecoverParticipant(ctx context.Context, w identitypostgres.RecoveryWork) (identitypostgres.RecoveryStatus, error) {
 	if i == nil || i.service == nil || ctx == nil {
 		return identitypostgres.RecoveryUnknown, invalid()
@@ -485,7 +487,7 @@ func (i *Issuer) RecoverParticipant(ctx context.Context, w identitypostgres.Reco
 			return identitypostgres.RecoveryUnknown, err
 		}
 		if !found {
-			if b.Plan.ResetRecipientUserID != "" || b.Plan.MagicLinkRecipientUserID != "" || b.Plan.MFAContinuationUserID != "" {
+			if b.Plan.ResetRecipientUserID != "" || b.Plan.MagicLinkRecipientUserID != "" || b.Plan.MFAContinuationUserID != "" || i.anonymousUpgradeAbsenceProfile(b.Command, b.Plan) {
 				return i.recoverAbsentRecipientIssuance(ctx, w, b.Command, cp)
 			}
 			return identitypostgres.RecoveryUnknown, nil
@@ -494,11 +496,20 @@ func (i *Issuer) RecoverParticipant(ctx context.Context, w identitypostgres.Reco
 	return identitypostgres.RecoveryCommitted, nil
 }
 
+// The native preparation's one target-bound grant is its only capability
+// mutation. The coordinator's sealed RecoveryWork supplies its original subject
+// provenance; this selection permits only the existing fenced absence proof,
+// not a rollback inferred from time, a missing exact row or a foreign profile.
+func (i *Issuer) anonymousUpgradeAbsenceProfile(b identity.CommandBinding, p identitypostgres.CapabilityIssuancePlan) bool {
+	op := identity.FeatureOperation{Owner: "identity/anonymous", OperationID: "identity.anonymous.upgrade", SchemaID: "identity.anonymous.upgrade.prepare.native-v1", SchemaVersion: 1, RecordRequirement: identity.FeatureRecordOmitted}
+	return b.ValidateFor(op) == nil && b.ActorKind == authorization.SubjectUser && string(b.ActorID) == string(b.UserID) && p.RegistrationUserID == "" && p.ResetRecipientUserID == "" && p.MagicLinkRecipientUserID == "" && p.MFAContinuationUserID == "" && len(p.Grants) == 1 && p.Grants[0].Purpose == capability.Purpose(op.OperationID) && i.ValidateCapabilityIssuance(b, p) == nil
+}
+
 // RecoveryWork excludes the old command writer and relevant tenant mutation.
 // A nonmatching retained row is conflicting evidence, never absence. This
 // bounded primary read neither deletes issuance nor releases a consuming proof.
-// Native reset and magic-link request each have one frozen grant. Absence proves
-// producer performed no durable mutation; every other owner still votes itself.
+// Each selected profile has one frozen grant. Absence proves this producer
+// performed no durable mutation; every other owner still votes independently.
 func (i *Issuer) recoverAbsentRecipientIssuance(ctx context.Context, w identitypostgres.RecoveryWork, b identity.CommandBinding, cp identitypostgres.CapabilityPlan) (identitypostgres.RecoveryStatus, error) {
 	rows, err := w.Query(ctx, `SELECT EXISTS(SELECT 1 FROM public.capability_identity_one_use WHERE tenant_id=$1 AND purpose=$2 AND capability_id=$3) OR EXISTS(SELECT 1 FROM public.capability_identity_one_use WHERE tenant_id=$1 AND purpose=$2 AND replay_key_version=$4 AND replay_digest=$5) OR EXISTS(SELECT 1 FROM public.capability_identity_one_use WHERE tenant_id=$1 AND origin_command_id=$6)`, string(b.TenantID), string(cp.Purpose), cp.CapabilityID, int64(cp.ReplayKeyVersion), cp.ReplayDigest[:], string(b.CommandID))
 	if err != nil {

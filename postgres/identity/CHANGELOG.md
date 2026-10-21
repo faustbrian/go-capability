@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Reconcile unknown native anonymous-upgrade issuance as not committed only
+  when its exact single-grant preparation profile has no original capability,
+  replay identity or originating-command row under the coordinator recovery
+  fence. Retained or conflicting evidence remains conservative; original proof
+  identity and expiry are unchanged, without a new store or migration.
+
 - Use the patched Go 1.27.3 verification toolchain for GO-2026-6809 in
   `crypto/x509`; consumers must also use a patched Go build toolchain.
 
