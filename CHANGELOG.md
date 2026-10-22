@@ -3,6 +3,12 @@
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and
 the module follows semantic versioning.
 
+## 2.1.0 - 2026-10-22
+
+### Changed
+
+- Publish the current source and documentation with a fresh immutable tag.
+
 ## [Unreleased]
 
 ### Security
