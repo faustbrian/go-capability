@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Reconcile original single-grant organization invitation-send issuance as
+  not committed only when the exact capability, replay identity and originating
+  command are absent under the existing coordinator recovery fence. Preserve
+  inviter/recipient scope and original expiry; retained evidence and other
+  issuance profiles remain conservative. No new storage or migration is added.
+
 - Prepare the original MFA child for the explicitly selected native passkey
   assertion profile. Bind its self-user command, signed primary correlation,
   tenant and encrypted restoration without broadening anonymous primary APIs

@@ -57,6 +57,17 @@ authority, policy and limits and consume atomically with membership/audit effect
 through the sole identity coordinator. The existing native coordinator must
 support that closed invitation profile before this preparation can be executed.
 
+Original `identity.organization.invitation-send` / `organization-invitation-send`
+v1 recovery additionally permits the existing fenced absence proof for exactly
+one accept-purpose grant. The sealed coordinator supplies the original command,
+tenant, inviter, recipient, record and frozen grant; ordinary caller metadata is
+not recovery authority. A missing exact row alone is insufficient: capability
+ID, replay identity and every issuance of the originating command must all be
+absent. Conflicting or retained evidence remains unknown; expiry is never proof
+of rollback. Each other participant still votes before the sole coordinator
+classifies the command. No proof is signed, renewed, consumed or redelivered,
+and no schema change is required. Other issuance profiles are unchanged.
+
 `IssuerConfig.RetainEmailVerificationTargets` explicitly selects migration 005.
 It retains the exact authenticated signed identifier resource during the same
 original issuance transaction, including signup and unselected managed links.

@@ -487,7 +487,7 @@ func (i *Issuer) RecoverParticipant(ctx context.Context, w identitypostgres.Reco
 			return identitypostgres.RecoveryUnknown, err
 		}
 		if !found {
-			if b.Plan.ResetRecipientUserID != "" || b.Plan.MagicLinkRecipientUserID != "" || b.Plan.MFAContinuationUserID != "" || i.anonymousUpgradeAbsenceProfile(b.Command, b.Plan) {
+			if b.Plan.ResetRecipientUserID != "" || b.Plan.MagicLinkRecipientUserID != "" || b.Plan.MFAContinuationUserID != "" || i.anonymousUpgradeAbsenceProfile(b.Command, b.Plan) || i.organizationInvitationAbsenceProfile(b.Command, b.Plan) {
 				return i.recoverAbsentRecipientIssuance(ctx, w, b.Command, cp)
 			}
 			return identitypostgres.RecoveryUnknown, nil
