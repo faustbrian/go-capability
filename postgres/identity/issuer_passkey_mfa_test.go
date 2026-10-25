@@ -74,7 +74,7 @@ func TestPasskeyMFAIssuerRetainsExactOriginalPrimaryAndChild(t *testing.T) {
 	if _, ok := issuerPlanSubject(b, mixed); ok {
 		t.Fatal("mixed authority selected passkey child subject")
 	}
-	if _, err := i.PreparePasskeyMFAContinuation(nil, b, payload); err == nil {
+	if _, err := i.PreparePasskeyMFAContinuation(nilContextForTest(), b, payload); err == nil {
 		t.Fatal("nil context admitted")
 	}
 }
