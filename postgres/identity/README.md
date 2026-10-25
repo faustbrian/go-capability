@@ -117,6 +117,14 @@ preparation binds the MFA subject and preserves signed bytes, ID and expiry
 across retries without renewing disclosure. Real native factor persistence and
 completion remain required before a public MFA login can use this profile.
 
+`issuer.PreparePasskeyMFAContinuation(ctx, binding, payload)` selects the separate
+native UV-passkey primary profile. Its exact self-user `signin-verify.native-v1`
+command uses its own ID as record and signed child correlation. This method does
+not validate an assertion or bypass an enrolled factor: the genuine native
+assertion owner must prove browser, user, key and factor authority before the
+kernel stages the child. The same encrypted preparation preserves original
+bytes and expiry on recovery. Existing anonymous primary APIs stay unchanged.
+
 `issuer.PrepareMFAConsumption(ctx, factorBinding, recipientUserID,
 continuationID, scopeDigest, configuredIssuer, proof, originalEnvelope,
 originalReplayVersion)` verifies that same child for the closed anonymous

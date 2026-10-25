@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Prepare the original MFA child for the explicitly selected native passkey
+  assertion profile. Bind its self-user command, signed primary correlation,
+  tenant and encrypted restoration without broadening anonymous primary APIs
+  or granting authentication, factor completion or session authority.
+
 - Reconcile unknown native anonymous-upgrade issuance as not committed only
   when its exact single-grant preparation profile has no original capability,
   replay identity or originating-command row under the coordinator recovery

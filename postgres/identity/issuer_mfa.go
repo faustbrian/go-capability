@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"time"
 
+	"github.com/faustbrian/go-authorization/v3"
 	"github.com/faustbrian/go-capability/v2"
 	identity "github.com/faustbrian/go-identity"
 	identitypostgres "github.com/faustbrian/go-identity/postgres"
@@ -40,6 +41,25 @@ func (i *Issuer) PrepareVerificationMFAContinuation(ctx context.Context, b ident
 	}
 	plan := identitypostgres.CapabilityIssuancePlan{MFAContinuationUserID: b.UserID}
 	return i.preparePlan(ctx, b, plan, []capability.Payload{input}, true)
+}
+
+// PreparePasskeyMFAContinuation signs the original child of the explicit native
+// UV-passkey primary profile. The self-user command retains its own ID as both
+// record and signed correlation; this is not a general subject override. The
+// native owner must prove actual assertion/browser/factor authority before the
+// kernel stages the child in the same transaction. Preparation performs no SQL,
+// authentication or session issuance. Restore original encrypted custody on
+// retries rather than signing another child or extending its lifetime.
+func (i *Issuer) PreparePasskeyMFAContinuation(ctx context.Context, b identity.CommandBinding, input capability.Payload) (PreparedIssuance, error) {
+	if !passkeyMFAIssuerBinding(b, identity.UserID(input.Subject)) || !mfaIssuancePayload(input) || input.CorrelationID != string(b.CommandID) {
+		return PreparedIssuance{}, invalid()
+	}
+	return i.preparePlan(ctx, b, identitypostgres.CapabilityIssuancePlan{MFAContinuationUserID: b.UserID}, []capability.Payload{input}, true)
+}
+
+func passkeyMFAIssuerBinding(b identity.CommandBinding, user identity.UserID) bool {
+	op := identity.FeatureOperation{Owner: "passkey", OperationID: "identity.passkey.signin-verify", SchemaID: "identity.passkey.signin-verify.native-v1", SchemaVersion: 1, RecordRequirement: identity.FeatureRecordRequired}
+	return issuerText(string(user)) && b.UserID == user && b.AnonymousFlowID == "" && b.RecordID == string(b.CommandID) && b.ActorKind == authorization.SubjectUser && string(b.ActorID) == string(user) && b.ValidateFor(op) == nil
 }
 
 func verificationMFAIssuerBinding(b identity.CommandBinding, user identity.UserID) bool {
