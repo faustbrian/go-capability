@@ -39,8 +39,8 @@ github.com/faustbrian/go-audit v1.0.0 h1:wVUkuXXBZIBj/6ORTZEgbbBPw2ymIaXnnTDrhBV
 github.com/faustbrian/go-audit v1.0.0/go.mod h1:IrR+KzmsdkEizekCStgGor5Mqj4OfAj25REXAqDJ540=
 github.com/faustbrian/go-audit/postgres v1.0.2-0.20261015062502-d62df280d85e h1:ANFUV8edvq/pjqI8A12w5EnUVCo4nV4vdhauKmks8YE=
 github.com/faustbrian/go-audit/postgres v1.0.2-0.20261015062502-d62df280d85e/go.mod h1:eP+QK3GMSeAP5Lf4F1KpdVljW3z/eoHmu81ZsqszAMk=
-github.com/faustbrian/go-authentication/v2 v2.0.2-0.20261015052822-d9f5132c7f68 h1:Dzbh18x7aIDc2RKDSYStHtmssiMSDNWMKN3HmGUCsrU=
-github.com/faustbrian/go-authentication/v2 v2.0.2-0.20261015052822-d9f5132c7f68/go.mod h1:3ab0dEi2IOIlvEISAJLPhlJE0TlNO/lGdjU+cjHZmjg=
+github.com/faustbrian/go-authentication/v2 v2.1.0 h1:7ikUsYBQhpgpjdbpVduEdDb2M9KuHCCFh3NDNh34yAs=
+github.com/faustbrian/go-authentication/v2 v2.1.0/go.mod h1:3ab0dEi2IOIlvEISAJLPhlJE0TlNO/lGdjU+cjHZmjg=
 github.com/faustbrian/go-authorization/v3 v3.0.1-0.20261015052455-a55bbebb1060 h1:3YN3ZyLKlU+Qo7fh0XczJwqpXW59tmP1ZfAR33Eh67c=
 github.com/faustbrian/go-authorization/v3 v3.0.1-0.20261015052455-a55bbebb1060/go.mod h1:1CrqZmsebZ1miA3k8hitH0g2fCSHuzdsmSoCRJ58zfw=
 github.com/faustbrian/go-cache/v2 v2.0.0 h1:I/e1YaZzs4DMFmqyvOs/kG8U/env6/5ZH+5H9o8/ba0=
