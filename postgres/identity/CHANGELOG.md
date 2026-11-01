@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Prove the native prepared account-link consumer with original OAuth state and
+  a separately issued final link grant. Actual issuance/consumption, account,
+  audit and lifecycle owners share the existing coordinator; rollback releases
+  both inputs and uncertain exchange never permits another attempt. Provider,
+  session and risk authority remain explicit other-owner test boundaries.
+
 - Prepare consumption of an already-issued canonical explicit self-account-link
   proof under configured verification and retained replay keys. Preserve the
   exact signed intent, envelope and expiry; the existing native participant
