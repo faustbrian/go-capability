@@ -1,5 +1,21 @@
 # Identity capability PostgreSQL participant
 
+`issuer.PrepareAccountLinkConsumption(ctx, command, proof, originalReplayVersion)`
+reauthenticates an already-issued canonical explicit self-link proof before
+counter enrichment. The root command constructor binds the full provider,
+target, actor, session, policy and mutation intent; preparation accepts only its
+exact original envelope under the configured issuer, audience, revocation and
+time policy. Implicit, administrative and enriched commands deny. Retained
+replay-key custody and signed expiry remain unchanged, including after rotation.
+
+Preparation performs no SQL, signing, custody transfer or consumption. Compose
+the existing `Participant` with the native `AccountLinkUnitOfWork` and actual
+provider/session/policy/risk owners for atomic one-use consumption, mutation,
+audit, lifecycle and conservative recovery. A plan is not provider authority or
+a commit receipt. This seam does not implement OAuth state reservation before
+exchange or attachment of a grant minted after exchange; those require their
+separate coordinator-owned preparation and capability-issued custody.
+
 `RetireEmailVerificationGrants` is callable only by the exact original native
 email-removal Apply after the kernel locks/prepares its full directory partition.
 It uses the same Work, not a new transaction or authority. Revoke only unused

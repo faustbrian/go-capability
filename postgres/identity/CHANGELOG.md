@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Prepare consumption of an already-issued canonical explicit self-account-link
+  proof under configured verification and retained replay keys. Preserve the
+  exact signed intent, envelope and expiry; the existing native participant
+  consumes with the account mutation in the sole identity transaction. This
+  adds no storage migration, OAuth exchange or post-exchange issuance authority.
+
 - Reconcile original single-grant organization invitation-send issuance as
   not committed only when the exact capability, replay identity and originating
   command are absent under the existing coordinator recovery fence. Preserve
