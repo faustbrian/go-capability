@@ -25,7 +25,7 @@ func TestVerificationMFAIssuerConservesExplicitParentAndSubject(t *testing.T) {
 	payload.IssuedAt, payload.NotBefore = config.Crypto.Clock(), config.Crypto.Clock()
 	payload.Caveats = map[string]string{"mfa.profile": "identity-mfa-continuation-v1", "mfa.scope": strings.Repeat("07", 32)}
 	declaration := kernel.CapabilityIssuancePlan{MFAContinuationUserID: b.UserID}
-	if subject, valid := issuerPlanSubject(b, declaration); !valid || subject != b.UserID {
+	if subject, valid := issuerPlanSubject(b, declaration); !valid || subject != string(b.UserID) {
 		t.Fatal("separately committed verification parent cannot retain explicit recipient")
 	}
 	prepared, err := i.PrepareVerificationMFAContinuation(context.Background(), b, payload)

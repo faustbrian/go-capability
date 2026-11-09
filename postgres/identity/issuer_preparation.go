@@ -294,7 +294,7 @@ func (c *IssuancePreparationCodec) verify(ctx context.Context, token []byte, b i
 	if !valid {
 		return capability.Grant{}, invalid()
 	}
-	metadata, err := c.issuer.grantPlan(b, subject, grant, plan.Grants[index].ReplayKeyVersion)
+	metadata, err := c.issuer.grantSubjectPlan(b, subject, grant, plan.Grants[index].ReplayKeyVersion)
 	if err != nil || metadata != plan.Grants[index] {
 		return capability.Grant{}, invalid()
 	}

@@ -139,7 +139,7 @@ func (i *Issuer) prepare(ctx context.Context, b identity.CommandBinding, registr
 func (i *Issuer) preparePlan(ctx context.Context, b identity.CommandBinding, plan identitypostgres.CapabilityIssuancePlan, inputs []capability.Payload, fixedChallengeID bool) (out PreparedIssuance, err error) {
 	registration, resetRecipient, magicLinkRecipient, mfaSubject := plan.RegistrationUserID, plan.ResetRecipientUserID, plan.MagicLinkRecipientUserID, plan.MFAContinuationUserID
 	subject, valid := issuerPlanSubject(b, plan)
-	if i == nil || i.service == nil || ctx == nil || !valid || len(inputs) == 0 || len(inputs) > 16 || (resetRecipient != "" || magicLinkRecipient != "" || mfaSubject != "") && len(inputs) != 1 || fixedChallengeID != (mfaSubject != "") {
+	if i == nil || i.service == nil || ctx == nil || !valid || len(inputs) == 0 || len(inputs) > 16 || (resetRecipient != "" || magicLinkRecipient != "" || mfaSubject != "" || oauthRPIssuanceOperation(b)) && len(inputs) != 1 || fixedChallengeID != (mfaSubject != "") {
 		return out, invalid()
 	}
 	ctx, cancel := context.WithTimeout(ctx, i.timeout)
@@ -161,6 +161,9 @@ func (i *Issuer) preparePlan(ctx context.Context, b identity.CommandBinding, pla
 		}
 	}()
 	for _, v := range inputs {
+		if oauthRPIssuanceOperation(b) && !oauthRPIssuancePayload(b, v) {
+			return out, invalid()
+		}
 		if !fixedChallengeID && v.ID != "" || fixedChallengeID && !mfaIssuancePayload(v) || v.Subject != string(subject) || registration != "" && v.Operation != "identity.identifier.verify" || resetRecipient != "" && v.Operation != "identity.password.reset-complete" || magicLinkRecipient != "" && v.Operation != "identity.magic-link.consume" || v.Tenant != string(b.TenantID) || v.Bearer || v.MaxUses != 1 || len(v.Audiences) != 1 || v.Audiences[0] != i.audience || v.ExpiresAt.Location() != time.UTC || v.ExpiresAt.Nanosecond() != 0 || v.ExpiresAt.Unix() <= 0 {
 			return out, invalid()
 		}
@@ -183,7 +186,7 @@ func (i *Issuer) preparePlan(ctx context.Context, b identity.CommandBinding, pla
 		if e != nil {
 			return out, issuerFailure(ctx)
 		}
-		cp, e := i.grantPlan(b, subject, grant, i.current)
+		cp, e := i.grantSubjectPlan(b, subject, grant, i.current)
 		if e != nil {
 			return out, e
 		}
@@ -291,10 +294,13 @@ func (i *Issuer) Stage(ctx context.Context, w identitypostgres.Work, p PreparedI
 // Exact cryptographic provenance is rederived from Grants in the sealed phase.
 func (i *Issuer) ValidateCapabilityIssuance(b identity.CommandBinding, p identitypostgres.CapabilityIssuancePlan) error {
 	_, valid := issuerPlanSubject(b, p)
-	if i == nil || i.service == nil || !valid || p.Contributor != i.Descriptor() || len(p.Grants) == 0 || len(p.Grants) > 16 || (p.ResetRecipientUserID != "" || p.MagicLinkRecipientUserID != "" || p.MFAContinuationUserID != "") && len(p.Grants) != 1 {
+	if i == nil || i.service == nil || !valid || p.Contributor != i.Descriptor() || len(p.Grants) == 0 || len(p.Grants) > 16 || (p.ResetRecipientUserID != "" || p.MagicLinkRecipientUserID != "" || p.MFAContinuationUserID != "" || oauthRPIssuanceOperation(b)) && len(p.Grants) != 1 {
 		return invalid()
 	}
 	for n, v := range p.Grants {
+		if oauthRPIssuanceOperation(b) && v.Purpose != "identity.oauth.callback" {
+			return invalid()
+		}
 		if p.RegistrationUserID != "" && v.Purpose != "identity.identifier.verify" || p.ResetRecipientUserID != "" && v.Purpose != "identity.password.reset-complete" || p.MagicLinkRecipientUserID != "" && v.Purpose != "identity.magic-link.consume" || p.MFAContinuationUserID != "" && v.Purpose != "identity.mfa.complete" {
 			return invalid()
 		}
@@ -314,10 +320,14 @@ func (i *Issuer) ValidateCapabilityIssuance(b identity.CommandBinding, p identit
 }
 
 func (i *Issuer) grantPlan(b identity.CommandBinding, subject identity.UserID, g capability.Grant, version uint32) (identitypostgres.CapabilityPlan, error) {
+	return i.grantSubjectPlan(b, string(subject), g, version)
+}
+
+func (i *Issuer) grantSubjectPlan(b identity.CommandBinding, subject string, g capability.Grant, version uint32) (identitypostgres.CapabilityPlan, error) {
 	v := g.Payload()
 	digest := g.EnvelopeDigest()
 	key := i.keys[version]
-	if key == ([32]byte{}) || digest == ([32]byte{}) || v.Subject != string(subject) || v.Tenant != string(b.TenantID) || v.Bearer || v.MaxUses != 1 || len(v.Audiences) != 1 || v.Audiences[0] != i.audience || v.ExpiresAt.Location() != time.UTC || v.ExpiresAt.Nanosecond() != 0 {
+	if key == ([32]byte{}) || digest == ([32]byte{}) || v.Subject != subject || v.Tenant != string(b.TenantID) || v.Bearer || v.MaxUses != 1 || len(v.Audiences) != 1 || v.Audiences[0] != i.audience || v.ExpiresAt.Location() != time.UTC || v.ExpiresAt.Nanosecond() != 0 || oauthRPIssuanceOperation(b) && !oauthRPIssuancePayload(b, v) {
 		return identitypostgres.CapabilityPlan{}, invalid()
 	}
 	if _, err := capability.CanonicalPayload(v, i.limits); err != nil {
@@ -371,7 +381,7 @@ func (i *Issuer) PersistCapabilityIssuance(ctx context.Context, w identitypostgr
 		if b.Plan.MFAContinuationUserID != "" && !mfaIssuancePayload(g.Payload()) {
 			return invalid()
 		}
-		expected, err := i.grantPlan(b.Command, subject, g, b.Plan.Grants[n].ReplayKeyVersion)
+		expected, err := i.grantSubjectPlan(b.Command, subject, g, b.Plan.Grants[n].ReplayKeyVersion)
 		if err != nil || expected != b.Plan.Grants[n] {
 			return invalid()
 		}
@@ -544,26 +554,29 @@ func issuerBinding(b identity.CommandBinding) bool {
 
 // Subject selection changes only the prospective credential, never its original
 // command scope. The kernel independently proves actual same-Work registration.
-func issuerSubject(b identity.CommandBinding, registration identity.UserID) (identity.UserID, bool) {
+func issuerSubject(b identity.CommandBinding, registration identity.UserID) (string, bool) {
 	if registration == "" {
-		return b.UserID, issuerBinding(b)
+		return string(b.UserID), issuerBinding(b)
 	}
 	op := identity.FeatureOperation{Owner: "identity/password", OperationID: "identity.password.signup", SchemaID: "password-signup", SchemaVersion: 1, RecordRequirement: identity.FeatureRecordOmitted, SubjectRequirement: identity.FeatureSubjectAnonymousFlow}
 	if b.OperationID == "identity.username.signup" {
 		op.Owner, op.OperationID, op.SchemaID = "identity/username", "identity.username.signup", "username-signup"
 	}
-	return registration, issuerText(string(registration)) && b.UserID == "" && b.AnonymousFlowID != "" && b.ValidateFor(op) == nil
+	return string(registration), issuerText(string(registration)) && b.UserID == "" && b.AnonymousFlowID != "" && b.ValidateFor(op) == nil
 }
 
 // Reset selection is not a general anonymous subject override. Keep signup's
 // historical rules intact and bind the independent existing-recipient profile.
-func issuerPlanSubject(b identity.CommandBinding, p identitypostgres.CapabilityIssuancePlan) (identity.UserID, bool) {
+func issuerPlanSubject(b identity.CommandBinding, p identitypostgres.CapabilityIssuancePlan) (string, bool) {
+	if oauthRPIssuanceOperation(b) {
+		return oauthRPIssuanceSubject(b, p)
+	}
 	if p.MFAContinuationUserID != "" {
 		if b.OperationID == "identity.passkey.signin-verify" {
-			return p.MFAContinuationUserID, p.RegistrationUserID == "" && p.ResetRecipientUserID == "" && p.MagicLinkRecipientUserID == "" && passkeyMFAIssuerBinding(b, p.MFAContinuationUserID)
+			return string(p.MFAContinuationUserID), p.RegistrationUserID == "" && p.ResetRecipientUserID == "" && p.MagicLinkRecipientUserID == "" && passkeyMFAIssuerBinding(b, p.MFAContinuationUserID)
 		}
 		if b.OperationID == "identity.email.verification-signin" {
-			return p.MFAContinuationUserID, p.RegistrationUserID == "" && p.ResetRecipientUserID == "" && p.MagicLinkRecipientUserID == "" && verificationMFAIssuerBinding(b, p.MFAContinuationUserID)
+			return string(p.MFAContinuationUserID), p.RegistrationUserID == "" && p.ResetRecipientUserID == "" && p.MagicLinkRecipientUserID == "" && verificationMFAIssuerBinding(b, p.MFAContinuationUserID)
 		}
 		op := identity.FeatureOperation{Owner: "identity/magiclink", OperationID: "identity.magic-link.consume", SchemaID: "magic-link-consume", SchemaVersion: 1, RecordRequirement: identity.FeatureRecordOmitted, SubjectRequirement: identity.FeatureSubjectAnonymousFlow}
 		if b.OperationID == "identity.password.signin" {
@@ -575,17 +588,17 @@ func issuerPlanSubject(b identity.CommandBinding, p identitypostgres.CapabilityI
 		if b.OperationID == "identity.phone.password-signin" {
 			op.Owner, op.OperationID, op.SchemaID = "identity/phone", "identity.phone.password-signin", "phone-password-signin"
 		}
-		return p.MFAContinuationUserID, p.RegistrationUserID == "" && p.ResetRecipientUserID == "" && p.MagicLinkRecipientUserID == "" && issuerText(string(p.MFAContinuationUserID)) && b.UserID == "" && b.AnonymousFlowID != "" && b.ValidateFor(op) == nil
+		return string(p.MFAContinuationUserID), p.RegistrationUserID == "" && p.ResetRecipientUserID == "" && p.MagicLinkRecipientUserID == "" && issuerText(string(p.MFAContinuationUserID)) && b.UserID == "" && b.AnonymousFlowID != "" && b.ValidateFor(op) == nil
 	}
 	if p.MagicLinkRecipientUserID != "" {
 		op := identity.FeatureOperation{Owner: "identity/magiclink", OperationID: "identity.magic-link.request", SchemaID: "magic-link-request", SchemaVersion: 1, RecordRequirement: identity.FeatureRecordOmitted, SubjectRequirement: identity.FeatureSubjectAnonymousFlow}
-		return p.MagicLinkRecipientUserID, p.RegistrationUserID == "" && p.ResetRecipientUserID == "" && issuerText(string(p.MagicLinkRecipientUserID)) && b.UserID == "" && b.AnonymousFlowID != "" && b.ValidateFor(op) == nil
+		return string(p.MagicLinkRecipientUserID), p.RegistrationUserID == "" && p.ResetRecipientUserID == "" && issuerText(string(p.MagicLinkRecipientUserID)) && b.UserID == "" && b.AnonymousFlowID != "" && b.ValidateFor(op) == nil
 	}
 	if p.ResetRecipientUserID == "" {
 		return issuerSubject(b, p.RegistrationUserID)
 	}
 	op := identity.FeatureOperation{Owner: "identity/password", OperationID: "identity.password.reset-request", SchemaID: "password-reset-request", SchemaVersion: 1, RecordRequirement: identity.FeatureRecordOmitted, SubjectRequirement: identity.FeatureSubjectAnonymousFlow}
-	return p.ResetRecipientUserID, p.RegistrationUserID == "" && issuerText(string(p.ResetRecipientUserID)) && b.UserID == "" && b.AnonymousFlowID != "" && b.ValidateFor(op) == nil
+	return string(p.ResetRecipientUserID), p.RegistrationUserID == "" && issuerText(string(p.ResetRecipientUserID)) && b.UserID == "" && b.AnonymousFlowID != "" && b.ValidateFor(op) == nil
 }
 func issuerContext(ctx context.Context) error {
 	if ctx.Err() == context.Canceled {

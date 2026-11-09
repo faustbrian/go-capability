@@ -182,7 +182,9 @@ func TestPublicCoordinatorComposition(t *testing.T) {
 	preparationSource := identitypostgres.AdmissionPreparationMigrationSource{Base: identitypostgres.PreparationMigrationSource{Base: identitypostgres.StatusMigrationSource{Base: registrationSource, Version: 18}, Version: 19}, Version: 20}
 	accountSource := identitypostgres.AccountMigrationSource{Base: preparationSource, Version: 21}
 	preparedLinkSource := identitypostgres.AccountLinkPreparationMigrationSource{Base: identitypostgres.CounterPreparationMigrationSource{Base: accountSource, Version: 22}, Version: 23}
-	preparationRunner, err := migrations.NewRunner(preparedLinkSource, backend)
+	rpErasureSource := identitypostgres.OAuthRPPreparationErasureMigrationSource{Base: preparedLinkSource, Version: 24}
+	linkErasureSource := identitypostgres.AccountLinkPreparationErasureMigrationSource{Base: rpErasureSource, Version: 25}
+	preparationRunner, err := migrations.NewRunner(identitypostgres.AccountLinkPreparationErasureValidationMigrationSource{Base: linkErasureSource, Version: 26}, backend)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,6 +210,7 @@ func TestPublicCoordinatorComposition(t *testing.T) {
 	p := identitycapability.NewParticipant()
 	t.Run("native account-link consumption", func(t *testing.T) { testNativeAccountLinkConsumption(t, ctx, pool, repo, auditing, lifecycle) })
 	t.Run("native prepared account-link", func(t *testing.T) { testNativePreparedAccountLink(t, ctx, pool, repo, auditing, lifecycle) })
+	t.Run("native RP initiation", func(t *testing.T) { testNativeRPInitiation(t, ctx, pool, repo, auditing, lifecycle) })
 	t.Run("MFA continuation issuance", func(t *testing.T) { testMFAIssuance(t, ctx, pool, repo, auditing, lifecycle) })
 	t.Run("reset recipient issuance", func(t *testing.T) { testResetRecipientIssuance(t, ctx, pool, repo, auditing, lifecycle) })
 	t.Run("magic-link recipient issuance", func(t *testing.T) { testMagicLinkRecipientIssuance(t, ctx, pool, repo, auditing, lifecycle) })

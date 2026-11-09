@@ -439,10 +439,11 @@ func testNativePreparedAccountLinkCase(t *testing.T, ctx context.Context, pool *
 		if err != nil || result.Outcome != identity.CommitOutcomeCommitted || provider.generated.Load() != 1 {
 			t.Fatal("retained restart regenerated or lost original output", result.Outcome, err)
 		}
-		var generation, provenance string
+		var generation, started string
+		var erased bool
 		var fingerprintKey int64
-		if err := pool.Raw().QueryRow(ctx, `SELECT j.generation::text,j.preparation_ciphertext_generation::text,c.fingerprint_key_version FROM identity.commands j JOIN identity.identity_command_id_claims c USING(command_id) WHERE command_id=$1`, id).Scan(&generation, &provenance, &fingerprintKey); err != nil || generation != "2" || provenance != "1" || fingerprintKey != 1 {
-			t.Fatal("restart renewed output generation or original claim key", err)
+		if err := pool.Raw().QueryRow(ctx, `SELECT j.generation::text,j.preparation_started_generation::text,j.preparation_ciphertext IS NULL AND j.preparation_ciphertext_generation IS NULL,c.fingerprint_key_version FROM identity.commands j JOIN identity.identity_command_id_claims c USING(command_id) WHERE command_id=$1`, id).Scan(&generation, &started, &erased, &fingerprintKey); err != nil || generation != "2" || started != "1" || !erased || fingerprintKey != 1 {
+			t.Fatal("restart lost original exchange/claim provenance or retained terminal ciphertext", err)
 		}
 	}
 	if mode == "unknown-exchange" {
@@ -486,6 +487,11 @@ func testNativePreparedAccountLinkCase(t *testing.T, ctx context.Context, pool *
 		var class string
 		readErr := pool.Raw().QueryRow(ctx, `SELECT preparation_started_generation IS NOT NULL,preparation_ciphertext IS NOT NULL,command_plan IS NOT NULL,coalesce(terminal_class,'') FROM identity.commands WHERE command_id=$1`, id).Scan(&started, &retained, &attached, &class)
 		t.Fatalf("prepared public link did not commit: outcome=%d phase=%d class=%s generated=%d restored=%d started=%t retained=%t attached=%t error=%T read=%T", result.Outcome, provider.phase.Load(), class, provider.generated.Load(), provider.restored.Load(), started, retained, attached, err, readErr)
+	}
+	commandBytes, _ := base64.RawURLEncoding.DecodeString(string(commandID))
+	var erased bool
+	if err := pool.Raw().QueryRow(ctx, `SELECT preparation_ciphertext IS NULL AND preparation_ciphertext_generation IS NULL FROM identity.commands WHERE command_id=$1`, commandBytes).Scan(&erased); err != nil || !erased {
+		t.Fatal("terminal link retained provider output custody", err)
 	}
 	state, uses := "finalized", 1
 	if mode == "rollback" {

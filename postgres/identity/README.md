@@ -59,7 +59,8 @@ origin. It preserves the original operation/schema throughout preparation and
 recovery. A username route cannot impersonate a password origin or vice versa.
 This is unsigned-workflow composition, not registration authority: the existing
 kernel must still prove actual identity creation and stage the grant in its
-single protected transaction. Ordinary `Prepare` has no anonymous override.
+single protected transaction. Ordinary `Prepare` cannot select a registration
+subject; its native OAuth flow profile is separate.
 
 `PrepareOrganizationInvitationConsumption` authenticates an original invitation
 proof for `identity.organization.invitation.accept`. Supply the authenticated
@@ -443,6 +444,34 @@ See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 ## Original issuance
 
+### Native OAuth RP starts
+
+`issuer.Prepare` accepts the exact `identity/oauth` RP start bindings:
+`identity.account.link-start` / `identity.account.link-start.rp-v1` v1 for the
+actual self-user, or `identity.oauth.signin-start` /
+`identity.oauth.signin-start.rp-v1` v1 for an anonymous flow with a configured
+service-account actor. The flow remains a flow, never a registration or other
+user override. Both require the original RP transaction in `RecordID`.
+
+Each start prepares exactly one `identity.oauth.callback` grant with that exact
+subject and transaction resource, configured issuer/audience, `MaxUses: 1` and
+`Bearer: false`. Supply original whole-second UTC `IssuedAt`, equal `NotBefore`,
+and a positive validity of at most ten minutes. These profiles cannot issue a
+final `identity.account.link-token` grant. Native authorization and same-Work
+staging remain separate requirements; structural preparation grants neither.
+Checkpoint and restore the original custody as below; recovery never replaces
+state, extends its expiry, or reopens bearer disclosure.
+
+### Prepared account-link composition
+
+Install the identity owner's `AccountLinkPreparationErasureMigrationSource`
+and then `AccountLinkPreparationErasureValidationMigrationSource` after the
+selected preparation/RP-start history, before enabling prepared-link execution.
+The terminal writer erases temporary provider output and its ciphertext-generation
+marker atomically with the receipt. Preserve original start/claim generations
+for replay; do not treat erased ciphertext as lost exchange provenance or issue
+another grant. Pending or uncertain exchange output remains recoverable.
+
 ### Durable preparation custody
 
 `NewIssuancePreparationCodec(issuer, config)` selects a deployment-bound local
@@ -473,6 +502,15 @@ Missing keys, changed metadata and expired grants fail closed. Restoration
 returns staging-only custody: `issuer.Stage` still requires current native Work
 authority, and `TransferForDelivery` cannot reopen any restored bearer. Restore
 encrypted messages through the existing delivery contributor separately.
+
+`prepared.Grants()` returns the original authenticated grants in plan order,
+before or after checkpoint and after restoration. Its outer slice and each
+grant's `Payload()` collections are defensive copies. Projection uses only local
+metadata consistency checks; it invokes no signing, verification, clock, resolver
+or revocation collaborator and exposes no bearer bytes. It neither renews proof
+custody nor establishes current validity or native authorization. Keep current
+time, revocation and owner checks at the workflow's proper admission and protected
+execution phases. Zero, failed or inconsistent preparation returns no grants.
 
 This adapter contract does not itself implement the password signup service or
 prove the complete journal-retention/restart journey.
@@ -545,7 +583,8 @@ Retained versions are required for historical metadata and recovery.
 `Prepare` signs and verifies fresh random IDs outside every database transaction,
 then freezes immutable Grants and exact full-envelope fingerprints. It accepts
 only one-use, subject-bound tokens for the configured audience and original
-command tenant/user. Callers supply future-operation payload policy, never IDs
+command tenant/user, except the exact anonymous RP profile above. Callers supply
+future-operation payload policy, never IDs
 or replay digests. Replay identity is HMAC-SHA-256 over the ASCII domain
 `golib/capability/identity-replay/v1` plus NUL, big-endian uint32-length-prefixed
 tenant and purpose, and the authenticated 32-byte full-envelope SHA-256 digest.

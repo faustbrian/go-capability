@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Adopt the identity owner's prepared-link terminal erasure and validation
+  migrations in native composition. Replay retains the original exchange and
+  claim generations, not temporary provider-response ciphertext.
+
+- Expose defensive original grants from prepared or locally restored issuance
+  without repeating remote verification under native transaction locks. Preserve
+  signed payloads, envelope identity and proof-transfer lifetime; projection
+  supplies no fresh validity, revocation or native authorization decision.
+
+- Reauthenticate original RP callback-state proofs through the existing issuer
+  with their exact user/pre-auth subject, transaction and retained replay-key
+  version. Preparation is non-consuming and grants no exchange or link authority;
+  native current admission and atomic participant consumption remain required.
+
+- Prepare one original OAuth callback-state grant for the exact native RP link
+  and anonymous sign-in starts. Bind its actual user or pre-auth flow and RP
+  transaction, limit original validity to ten minutes, and preserve encrypted
+  checkpoint identity and expiry without a user override or final link grant.
+
 - Prove the native prepared account-link consumer with original OAuth state and
   a separately issued final link grant. Actual issuance/consumption, account,
   audit and lifecycle owners share the existing coordinator; rollback releases
