@@ -462,6 +462,16 @@ staging remain separate requirements; structural preparation grants neither.
 Checkpoint and restore the original custody as below; recovery never replaces
 state, extends its expiry, or reopens bearer disclosure.
 
+### Enterprise OIDC start
+
+The same issuer accepts `identity.sso.signin-start` with the exact native
+`identity.sso.signin-start.oidc-v1` binding and a service-account actor. The
+`RecordID` is the start command ID. Prepare one `identity.sso.oidc-callback`
+grant with the original pre-auth subject, tenant, resource and correlation.
+It is non-bearer, single-use, and has an original whole-second validity of at
+most ten minutes. The social OAuth consumption API cannot consume it; this
+profile adds issuance and same-command checkpoint restoration only.
+
 ### Prepared account-link composition
 
 Install the identity owner's `AccountLinkPreparationErasureMigrationSource`

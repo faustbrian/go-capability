@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Prepare one original enterprise OIDC callback-state grant for the exact SSO
+  start command. Bind the original tenant, pre-auth flow, transaction and
+  correlation; checkpoint restoration preserves the first expiry. This does
+  not enable callback consumption or issue a session.
+
 - Adopt the identity owner's prepared-link terminal erasure and validation
   migrations in native composition. Replay retains the original exchange and
   claim generations, not temporary provider-response ciphertext.
