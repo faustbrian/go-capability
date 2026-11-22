@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Prepare one original enterprise OAuth2 callback-state grant for the exact
+  anonymous `identity.sso.signin-start.oauth2-v1` schema. Preserve its original
+  flow, actor, tenant, command, correlation, signed bytes, replay metadata and
+  expiry through encrypted recovery, without OIDC/social/member-link fallback
+  or callback-consumption authority. No dependency or storage change is needed.
+
 - Support the exact member-bound enterprise OIDC explicit-link start schema
   through original callback-state issuance and separate
   `PrepareSSOOIDCExplicitLinkConsumption`. Require the self-user actor and no

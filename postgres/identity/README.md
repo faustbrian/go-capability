@@ -462,7 +462,17 @@ staging remain separate requirements; structural preparation grants neither.
 Checkpoint and restore the original custody as below; recovery never replaces
 state, extends its expiry, or reopens bearer disclosure.
 
-### Enterprise OIDC start
+### Enterprise OAuth2 and OIDC start
+
+`issuer.Prepare` accepts the exact anonymous native
+`identity.sso.signin-start.oauth2-v1` v1 schema under `identity.sso.signin-start`.
+Require the original service-account actor and pre-auth flow, no user override,
+and `RecordID` equal to the start command ID. Prepare exactly one non-bearer,
+single-use `identity.sso.oauth-callback` grant with the original tenant,
+subject, resource, correlation and whole-second UTC validity of at most ten
+minutes. Checkpoint restoration retains the original signed bytes, metadata
+and expiry. OIDC, social OAuth and member-link profiles cannot substitute for
+this schema or purpose; OAuth2 callback consumption remains separate.
 
 The same issuer accepts `identity.sso.signin-start` with the exact native
 `identity.sso.signin-start.oidc-v1` binding and a service-account actor. The
