@@ -469,8 +469,27 @@ The same issuer accepts `identity.sso.signin-start` with the exact native
 `RecordID` is the start command ID. Prepare one `identity.sso.oidc-callback`
 grant with the original pre-auth subject, tenant, resource and correlation.
 It is non-bearer, single-use, and has an original whole-second validity of at
-most ten minutes. The social OAuth consumption API cannot consume it; this
-profile adds issuance and same-command checkpoint restoration only.
+most ten minutes. The social OAuth consumption API cannot consume it.
+
+`issuer.PrepareSSOOIDCSigninConsumption(ctx, originalStart, proof, replayKeyVersion)`
+reauthenticates that original signed grant against the same exact start binding
+and derives its original capability plan. Supply the replay-key version from
+trusted original issuance custody, not the active default or request input.
+Configured signature, issuer, audience, time and revocation policy apply; the
+signed pre-auth subject, tenant, transaction, correlation and original lifetime
+must match. Retained key rotation preserves the original replay identity and
+expiry, and preparation neither transfers proof custody nor changes issuance.
+Another retained key derives different metadata, which the native participant
+must reject against the stored original issuance.
+
+This is authentication metadata only, not callback authorization, reservation,
+consumption, code exchange or session issuance. The enterprise adapter must
+authenticate the full signed RP-binding caveat and browser/provider/current
+policy; native Work must reserve through the existing Participant before PKCE
+decryption or exchange. The currently pinned kernel's generic capability-plan
+validator does not admit `identity.sso.oidc-callback`, so this seam alone does
+not enable native enterprise callback consumption. It adds no dependency pin,
+storage, migration, alternate participant or transaction owner.
 
 ### Prepared account-link composition
 

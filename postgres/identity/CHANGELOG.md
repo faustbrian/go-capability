@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Reauthenticate original enterprise OIDC callback-state proofs against the
+  exact anonymous SSO start binding and retained replay key. Preserve the
+  original envelope, transaction, correlation and expiry without granting
+  callback authority or consuming state. Native enterprise callback admission
+  and signed RP/browser checks remain separate composition requirements.
+
 - Prepare one original enterprise OIDC callback-state grant for the exact SSO
   start command. Bind the original tenant, pre-auth flow, transaction and
   correlation; checkpoint restoration preserves the first expiry. This does

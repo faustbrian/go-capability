@@ -48,6 +48,7 @@ type IssuerConfig struct {
 type Issuer struct {
 	issuer              string
 	service             capability.Service
+	clock               func() time.Time
 	limits              capability.Limits
 	audience            string
 	current             uint32
@@ -81,7 +82,7 @@ func NewIssuer(c IssuerConfig) (*Issuer, error) {
 	if err != nil {
 		return nil, invalid()
 	}
-	return &Issuer{issuer: c.Crypto.Issuer, service: s, limits: c.Crypto.Limits, audience: c.Audience, current: c.CurrentReplayKeyVersion, keys: keys, timeout: c.PreparationTimeout, verificationTargets: c.RetainEmailVerificationTargets}, nil
+	return &Issuer{issuer: c.Crypto.Issuer, service: s, clock: c.Crypto.Clock, limits: c.Crypto.Limits, audience: c.Audience, current: c.CurrentReplayKeyVersion, keys: keys, timeout: c.PreparationTimeout, verificationTargets: c.RetainEmailVerificationTargets}, nil
 }
 
 // Descriptor identifies the separate capability.issuance v1 original producer.
