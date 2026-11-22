@@ -8,6 +8,44 @@ import (
 	identitypostgres "github.com/faustbrian/go-identity/postgres"
 )
 
+// PrepareSSOOAuth2SigninConsumption reauthenticates an original enterprise
+// OAuth2 callback-state proof for the exact anonymous
+// identity.sso.signin-start.oauth2-v1 start binding. The original service-account
+// actor and pre-auth flow must remain valid, RecordID must equal the start
+// command ID, and the signed identity.sso.oauth-callback purpose, tenant,
+// subject, resource, correlation and original validity of at most ten minutes
+// must match. OIDC, social OAuth and member-link starts cannot select this
+// profile. Configured verification skew never extends signed expiry.
+//
+// replayKeyVersion comes from trusted original issuance custody, never request
+// input or the current issuance default. Retain that key for the proof's durable
+// lifetime. The returned plan preserves the original envelope, one-use policy,
+// expiry and keyed replay identity; the participant must still compare it with
+// durable issuance. Calls may overlap and borrow original proof custody without
+// signing, transfer, SQL, reservation or consumption.
+//
+// A plan grants no callback, code-exchange, account or session authority. The
+// enterprise owner must separately authenticate full signed RP intent, browser,
+// provider and current policy, and reserve through the existing Participant
+// before decrypting PKCE or exchanging a code. Native callback admission remains
+// a separate kernel composition requirement.
+//
+// PreparationTimeout and the earlier caller deadline bound verification.
+// Invalid composition returns InvalidInput; malformed, foreign, expired or
+// revoked proof returns Forbidden; unavailable verification, an invalid clock
+// or panic returns Unavailable. Cancellation remains classified, errors are
+// redacted and every failure returns a zero plan.
+func (i *Issuer) PrepareSSOOAuth2SigninConsumption(ctx context.Context, originalStart identity.CommandBinding, proof capability.Proof, replayKeyVersion uint32) (out identitypostgres.CapabilityPlan, err error) {
+	if originalStart.SchemaID != "identity.sso.signin-start.oauth2-v1" {
+		return out, invalid()
+	}
+	subject, ok := ssoIssuanceSubject(originalStart, identitypostgres.CapabilityIssuancePlan{})
+	if !ok {
+		return out, invalid()
+	}
+	return i.prepareSSOConsumption(ctx, originalStart, subject, proof, replayKeyVersion)
+}
+
 // PrepareSSOOIDCSigninConsumption reauthenticates an original enterprise OIDC
 // callback-state proof against its exact identity.sso.signin-start.oidc-v1
 // start binding. The anonymous flow remains the signed subject, RecordID must
@@ -38,7 +76,7 @@ func (i *Issuer) PrepareSSOOIDCSigninConsumption(ctx context.Context, originalSt
 	if !ok {
 		return out, invalid()
 	}
-	return i.prepareSSOOIDCConsumption(ctx, originalStart, subject, proof, replayKeyVersion)
+	return i.prepareSSOConsumption(ctx, originalStart, subject, proof, replayKeyVersion)
 }
 
 // PrepareSSOOIDCExplicitLinkConsumption reauthenticates original member-bound
@@ -67,10 +105,10 @@ func (i *Issuer) PrepareSSOOIDCExplicitLinkConsumption(ctx context.Context, orig
 	if !ok {
 		return out, invalid()
 	}
-	return i.prepareSSOOIDCConsumption(ctx, originalStart, subject, proof, replayKeyVersion)
+	return i.prepareSSOConsumption(ctx, originalStart, subject, proof, replayKeyVersion)
 }
 
-func (i *Issuer) prepareSSOOIDCConsumption(ctx context.Context, originalStart identity.CommandBinding, subject string, proof capability.Proof, replayKeyVersion uint32) (out identitypostgres.CapabilityPlan, err error) {
+func (i *Issuer) prepareSSOConsumption(ctx context.Context, originalStart identity.CommandBinding, subject string, proof capability.Proof, replayKeyVersion uint32) (out identitypostgres.CapabilityPlan, err error) {
 	if i == nil || i.service == nil || ctx == nil || i.keys[replayKeyVersion] == ([32]byte{}) {
 		return out, invalid()
 	}
@@ -84,7 +122,7 @@ func (i *Issuer) prepareSSOOIDCConsumption(ctx context.Context, originalStart id
 	if err := issuerContext(ctx); err != nil {
 		return out, err
 	}
-	grant, err := i.verifyConsumptionProof(ctx, proof, "identity.sso.oidc-callback")
+	grant, err := i.verifyConsumptionProof(ctx, proof, ssoIssuancePurpose(originalStart))
 	if err != nil {
 		return out, err
 	}

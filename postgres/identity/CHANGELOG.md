@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Reauthenticate original enterprise OAuth2 callback-state proofs through
+  `PrepareSSOOAuth2SigninConsumption` for the exact anonymous OAuth2 start.
+  Preserve signed purpose, tenant, flow, transaction, correlation, one-use
+  envelope, retained replay identity and strict original expiry without
+  reissuing or consuming state. OIDC/social/member-link profiles remain
+  separate; native callback admission, RP checks and atomic reservation remain
+  composition requirements. No dependency, storage or migration is added.
+
 - Prepare one original enterprise OAuth2 callback-state grant for the exact
   anonymous `identity.sso.signin-start.oauth2-v1` schema. Preserve its original
   flow, actor, tenant, command, correlation, signed bytes, replay metadata and

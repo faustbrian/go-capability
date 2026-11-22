@@ -474,6 +474,25 @@ minutes. Checkpoint restoration retains the original signed bytes, metadata
 and expiry. OIDC, social OAuth and member-link profiles cannot substitute for
 this schema or purpose; OAuth2 callback consumption remains separate.
 
+`issuer.PrepareSSOOAuth2SigninConsumption(ctx, originalStart, proof,
+replayKeyVersion)` reauthenticates that original OAuth2 grant against the same
+exact anonymous start binding. Supply the replay-key version from trusted
+original issuance custody, not request input or the current default. The
+configured signature, issuer, audience, revocation and time policy apply, with
+strict exclusive signed expiry even when verification allows clock skew.
+Preparation preserves the original envelope, tenant, flow, transaction,
+correlation, one-use policy and replay identity, including after key rotation.
+Another retained key derives different metadata, which the native participant
+must reject against durable original issuance. OIDC, social and member-link
+starts and proofs cannot substitute for this OAuth2 profile.
+
+This bounded read-only preparation borrows proof custody; it neither signs,
+transfers, opens SQL, reserves nor consumes state. It grants no callback,
+exchange or session authority. The enterprise owner must still authenticate
+full signed RP intent, browser, provider and current policy, then reserve
+through the existing Participant before PKCE decryption or code exchange.
+Native callback admission remains a separate kernel composition requirement.
+
 The same issuer accepts `identity.sso.signin-start` with the exact native
 `identity.sso.signin-start.oidc-v1` binding and a service-account actor. The
 `RecordID` is the start command ID. Prepare one `identity.sso.oidc-callback`
