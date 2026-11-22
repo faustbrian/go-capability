@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Support the exact member-bound enterprise OIDC explicit-link start schema
+  through original callback-state issuance and separate
+  `PrepareSSOOIDCExplicitLinkConsumption`. Require the self-user actor and no
+  anonymous flow; preserve signed consent, original replay keys and expiry.
+  Anonymous sign-in preparation stays anonymous-only. No dependency pin,
+  storage, migration or participant change is required; native consent,
+  session/policy checks and atomic consumption remain separate.
+
 - Reauthenticate original enterprise OIDC callback-state proofs against the
   exact anonymous SSO start binding and retained replay key. Preserve the
   original envelope, transaction, correlation and expiry without granting

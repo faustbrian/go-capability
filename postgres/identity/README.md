@@ -471,6 +471,15 @@ grant with the original pre-auth subject, tenant, resource and correlation.
 It is non-bearer, single-use, and has an original whole-second validity of at
 most ten minutes. The social OAuth consumption API cannot consume it.
 
+The distinct `identity.sso.signin-start.oidc-link-v1` v1 schema selects member-
+bound explicit-link initiation through the same `Prepare` API. Its actor must
+be `SubjectUser` and exactly match `UserID`, with no anonymous flow; `RecordID`
+still equals the original start command ID. The signed callback-state subject
+is that member, never a recipient override. The same non-bearer, one-use,
+tenant/resource/correlation and original ten-minute maximum lifetime apply.
+Encrypted checkpoint restoration retains the original signed consent and full
+binding; it cannot renew expiry, change mode or reopen bearer disclosure.
+
 `issuer.PrepareSSOOIDCSigninConsumption(ctx, originalStart, proof, replayKeyVersion)`
 reauthenticates that original signed grant against the same exact start binding
 and derives its original capability plan. Supply the replay-key version from
@@ -481,6 +490,15 @@ must match. Retained key rotation preserves the original replay identity and
 expiry, and preparation neither transfers proof custody nor changes issuance.
 Another retained key derives different metadata, which the native participant
 must reject against the stored original issuance.
+
+`issuer.PrepareSSOOIDCExplicitLinkConsumption(ctx, originalStart, proof,
+replayKeyVersion)` performs the same read-only authentication for the exact
+member-bound explicit-link start. The existing sign-in consumption method stays
+anonymous-only, and the member method rejects anonymous or social start bindings.
+The original member subject and complete replay/expiry witness remain unchanged,
+including after key rotation. Full signed consent/RP intent and current member,
+session, factor and organization policy remain the enterprise owner's checks;
+preparing a plan does not establish or consume those authorities.
 
 This is authentication metadata only, not callback authorization, reservation,
 consumption, code exchange or session issuance. The enterprise adapter must

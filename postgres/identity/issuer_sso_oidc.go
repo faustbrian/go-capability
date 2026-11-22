@@ -13,14 +13,30 @@ func ssoOIDCIssuanceOperation(b identity.CommandBinding) bool {
 	return b.OperationID == "identity.sso.signin-start"
 }
 
-// Match the kernel's sso OIDC-start owner, not the social OAuth RP profile.
-// Its preauth flow is an opaque capability subject, never a local user override.
+// Match only the kernel's two native SSO OIDC-start schemas, not the social
+// OAuth RP profile. Both preserve their original subject namespace.
 func ssoOIDCIssuanceSubject(b identity.CommandBinding, p identitypostgres.CapabilityIssuancePlan) (string, bool) {
 	if p.RegistrationUserID != "" || p.ResetRecipientUserID != "" || p.MagicLinkRecipientUserID != "" || p.MFAContinuationUserID != "" {
 		return "", false
 	}
+	if b.SchemaID == "identity.sso.signin-start.oidc-link-v1" {
+		return ssoOIDCExplicitLinkSubject(b)
+	}
+	return ssoOIDCSigninSubject(b)
+}
+
+func ssoOIDCSigninSubject(b identity.CommandBinding) (string, bool) {
 	op := identity.FeatureOperation{Owner: "sso", OperationID: "identity.sso.signin-start", SchemaID: "identity.sso.signin-start.oidc-v1", SchemaVersion: 1, RecordRequirement: identity.FeatureRecordRequired, SubjectRequirement: identity.FeatureSubjectAnonymousFlow}
 	return b.AnonymousFlowID, b.UserID == "" && b.ActorKind == authorization.SubjectServiceAccount && b.RecordID == string(b.CommandID) && b.ValidateFor(op) == nil
+}
+
+func ssoOIDCExplicitLinkSubject(b identity.CommandBinding) (string, bool) {
+	// Mirror identity/postgres.SSOOIDCExplicitLinkStartOperation without changing
+	// the pinned dependency. Its native owner still proves session and consent.
+	op := identity.FeatureOperation{Owner: "sso", OperationID: "identity.sso.signin-start", SchemaID: "identity.sso.signin-start.oidc-link-v1", SchemaVersion: 1, RecordRequirement: identity.FeatureRecordRequired, SubjectRequirement: identity.FeatureSubjectUser}
+	subject := string(b.UserID)
+	selfActor := b.ActorKind == authorization.SubjectUser && string(b.ActorID) == subject
+	return subject, selfActor && b.AnonymousFlowID == "" && b.RecordID == string(b.CommandID) && b.ValidateFor(op) == nil
 }
 
 func ssoOIDCIssuancePayload(b identity.CommandBinding, p capability.Payload) bool {

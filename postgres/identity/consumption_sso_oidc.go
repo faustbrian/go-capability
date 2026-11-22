@@ -34,8 +34,44 @@ import (
 // Cancellation remains classified, errors are redacted and every failure
 // returns a zero plan.
 func (i *Issuer) PrepareSSOOIDCSigninConsumption(ctx context.Context, originalStart identity.CommandBinding, proof capability.Proof, replayKeyVersion uint32) (out identitypostgres.CapabilityPlan, err error) {
-	subject, ok := ssoOIDCIssuanceSubject(originalStart, identitypostgres.CapabilityIssuancePlan{})
-	if i == nil || i.service == nil || ctx == nil || !ok || i.keys[replayKeyVersion] == ([32]byte{}) {
+	subject, ok := ssoOIDCSigninSubject(originalStart)
+	if !ok {
+		return out, invalid()
+	}
+	return i.prepareSSOOIDCConsumption(ctx, originalStart, subject, proof, replayKeyVersion)
+}
+
+// PrepareSSOOIDCExplicitLinkConsumption reauthenticates original member-bound
+// enterprise OIDC callback state for identity.sso.signin-start.oidc-link-v1 v1.
+// Only the exact self-user actor/subject with no anonymous flow is accepted;
+// RecordID must equal the original start command ID. The original signed
+// subject, tenant, transaction, correlation, one-use envelope, expiry and keyed
+// replay identity are preserved. replayKeyVersion must come from trusted
+// original issuance custody, not request input or the current issuance default.
+//
+// Like PrepareSSOOIDCSigninConsumption, this bounded, concurrent-safe phase
+// borrows proof custody and performs no signing, transfer, SQL, reservation or
+// consumption. The enterprise owner must separately authenticate full signed
+// consent/RP intent, current member/session/factor/organization policy and then
+// reserve atomically through the existing Participant. A plan grants no link,
+// callback, code-exchange or session authority. Anonymous sign-in and social
+// OAuth state cannot select this profile. Configured skew never renews expiry.
+//
+// PreparationTimeout and the earlier caller deadline bound verification.
+// Invalid composition returns InvalidInput; malformed, foreign, expired or
+// revoked proof returns Forbidden; verification uncertainty, invalid clocks
+// and panic return Unavailable. Cancellation remains classified; errors are
+// redacted and every failure returns a zero plan.
+func (i *Issuer) PrepareSSOOIDCExplicitLinkConsumption(ctx context.Context, originalStart identity.CommandBinding, proof capability.Proof, replayKeyVersion uint32) (out identitypostgres.CapabilityPlan, err error) {
+	subject, ok := ssoOIDCExplicitLinkSubject(originalStart)
+	if !ok {
+		return out, invalid()
+	}
+	return i.prepareSSOOIDCConsumption(ctx, originalStart, subject, proof, replayKeyVersion)
+}
+
+func (i *Issuer) prepareSSOOIDCConsumption(ctx context.Context, originalStart identity.CommandBinding, subject string, proof capability.Proof, replayKeyVersion uint32) (out identitypostgres.CapabilityPlan, err error) {
+	if i == nil || i.service == nil || ctx == nil || i.keys[replayKeyVersion] == ([32]byte{}) {
 		return out, invalid()
 	}
 	ctx, stop := context.WithTimeout(ctx, i.timeout)
