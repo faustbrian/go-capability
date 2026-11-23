@@ -87,8 +87,9 @@
   fence. Retained or conflicting evidence remains conservative; original proof
   identity and expiry are unchanged, without a new store or migration.
 
-- Use the patched Go 1.27.3 verification toolchain for GO-2026-6809 in
-  `crypto/x509`; consumers must also use a patched Go build toolchain.
+- Use the patched Go 1.27.4 verification toolchain for GO-2026-6859 in
+  `net/http` and the earlier GO-2026-6809 in `crypto/x509`; consumers must
+  also use a patched Go build toolchain.
 
 - Prepare exact original anonymous-upgrade proof consumption, binding the guest,
   permanent target, both sessions, source version, merge and remember profile.
