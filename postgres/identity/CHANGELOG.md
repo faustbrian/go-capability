@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Reauthenticate the exact pending unsolicited SAML confirmation proof.
+  Preserve its original signed recipient, record, replay key and deadline;
+  browser verification and the atomic one-use mutation remain native concerns.
+
 - Issue and prepare consumption of the original SP-initiated SAML RelayState
   grant only for exact native browser custody. Preserve separate ACS purpose,
   single-use identity, and the original five-minute maximum lifetime.
