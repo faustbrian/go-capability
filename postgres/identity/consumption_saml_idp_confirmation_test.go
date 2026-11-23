@@ -146,7 +146,7 @@ func TestPrepareSSOSAMLIDPConfirmationConsumptionRejectsSignedReplacements(t *te
 		"record":                             func(p *capability.Payload) { p.Resource += "-foreign" },
 		"correlation":                        func(p *capability.Payload) { p.CorrelationID += "-foreign" },
 		"missing correlation":                func(p *capability.Payload) { p.CorrelationID = "" },
-		"SP-initiated purpose":               func(p *capability.Payload) { p.Operation = "identity.sso.saml-callback" },
+		"SP-initiated purpose":               func(p *capability.Payload) { p.Operation = "identity.sso.saml-acs" },
 		"OIDC purpose":                       func(p *capability.Payload) { p.Operation = "identity.sso.oidc-callback" },
 		"foreign audience":                   func(p *capability.Payload) { p.Audiences = []string{"foreign"} },
 		"multiple audiences":                 func(p *capability.Payload) { p.Audiences = []string{"identity", "foreign"} },
@@ -157,9 +157,9 @@ func TestPrepareSSOSAMLIDPConfirmationConsumptionRejectsSignedReplacements(t *te
 		"earlier validity over five minutes": func(p *capability.Payload) { p.NotBefore = p.IssuedAt.Add(-time.Second) },
 	} {
 		t.Run(name, func(t *testing.T) {
-			i, config, b, payload, cutoff := samlIDPConfirmationConsumptionFixture(t)
+			i, config, b, payload, _ := samlIDPConfirmationConsumptionFixture(t)
 			mutate(&payload)
-			cutoff = payload.ExpiresAt.Add(time.Microsecond)
+			cutoff := payload.ExpiresAt.Add(time.Microsecond)
 			proof, grant := signedAnonymousUpgrade(t, config, payload)
 			if got, err := prepareSAMLIDPConfirmationConsumption(t, i, context.Background(), b, proof, grant.EnvelopeDigest(), 1, cutoff); err == nil || got != (kernel.CapabilityPlan{}) {
 				t.Fatal("signed foreign confirmation profile produced a consuming plan")
