@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Issue and prepare consumption of the original SP-initiated SAML RelayState
+  grant only for exact native browser custody. Preserve separate ACS purpose,
+  single-use identity, and the original five-minute maximum lifetime.
+
 - Reauthenticate original enterprise OAuth2 callback-state proofs through
   `PrepareSSOOAuth2SigninConsumption` for the exact anonymous OAuth2 start.
   Preserve signed purpose, tenant, flow, transaction, correlation, one-use

@@ -8,6 +8,27 @@ import (
 	identitypostgres "github.com/faustbrian/go-identity/postgres"
 )
 
+// PrepareSSOSAMLSigninConsumption authenticates the original SP-initiated
+// browser's RelayState proof for the exact native SAML start. The original
+// browser flow, tenant, transaction and correlation must match the one-use
+// SAML ACS grant and its exclusive lifetime of at most five minutes.
+// replayKeyVersion is selected only from original durable issuance.
+//
+// The issuer borrows the proof under its configured timeout without signing,
+// SQL, reservation or disclosure. The callback owner must also authenticate
+// the signed SAML response, its outstanding request and browser correlation,
+// then reserve and consume the original grant in the protected native Work.
+func (i *Issuer) PrepareSSOSAMLSigninConsumption(ctx context.Context, originalStart identity.CommandBinding, proof capability.Proof, replayKeyVersion uint32) (out identitypostgres.CapabilityPlan, err error) {
+	if originalStart.OperationID != "identity.sso.saml-start" || originalStart.SchemaID != "identity.sso.saml-start.v1" {
+		return out, invalid()
+	}
+	subject, ok := ssoIssuanceSubject(originalStart, identitypostgres.CapabilityIssuancePlan{})
+	if !ok {
+		return out, invalid()
+	}
+	return i.prepareSSOConsumption(ctx, originalStart, subject, proof, replayKeyVersion)
+}
+
 // PrepareSSOOAuth2SigninConsumption reauthenticates an original enterprise
 // OAuth2 callback-state proof for the exact anonymous
 // identity.sso.signin-start.oauth2-v1 start binding. The original service-account

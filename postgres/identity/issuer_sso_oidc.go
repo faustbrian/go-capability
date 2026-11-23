@@ -10,7 +10,7 @@ import (
 )
 
 func ssoIssuanceOperation(b identity.CommandBinding) bool {
-	return b.OperationID == "identity.sso.signin-start"
+	return b.OperationID == "identity.sso.signin-start" || b.OperationID == "identity.sso.saml-start"
 }
 
 // Match only native enterprise start schemas, not the social OAuth RP profile.
@@ -20,6 +20,11 @@ func ssoIssuanceSubject(b identity.CommandBinding, p identitypostgres.Capability
 		return "", false
 	}
 	switch b.SchemaID {
+	case "identity.sso.saml-start.v1":
+		// Mirror identity/postgres.SSOSAMLSigninStartOperation without changing
+		// the pinned dependency; SAML retains its native operation and ACS purpose.
+		op := identity.FeatureOperation{Owner: "sso", OperationID: "identity.sso.saml-start", SchemaID: "identity.sso.saml-start.v1", SchemaVersion: 1, RecordRequirement: identity.FeatureRecordRequired, SubjectRequirement: identity.FeatureSubjectAnonymousFlow}
+		return b.AnonymousFlowID, b.UserID == "" && b.ActorKind == authorization.SubjectServiceAccount && b.RecordID == string(b.CommandID) && b.ValidateFor(op) == nil
 	case "identity.sso.signin-start.oauth2-v1":
 		op := identity.FeatureOperation{Owner: "sso", OperationID: "identity.sso.signin-start", SchemaID: "identity.sso.signin-start.oauth2-v1", SchemaVersion: 1, RecordRequirement: identity.FeatureRecordRequired, SubjectRequirement: identity.FeatureSubjectAnonymousFlow}
 		return b.AnonymousFlowID, b.UserID == "" && b.ActorKind == authorization.SubjectServiceAccount && b.RecordID == string(b.CommandID) && b.ValidateFor(op) == nil
@@ -34,6 +39,8 @@ func ssoIssuanceSubject(b identity.CommandBinding, p identitypostgres.Capability
 
 func ssoIssuancePurpose(b identity.CommandBinding) capability.Purpose {
 	switch b.SchemaID {
+	case "identity.sso.saml-start.v1":
+		return "identity.sso.saml-acs"
 	case "identity.sso.signin-start.oauth2-v1":
 		return "identity.sso.oauth-callback"
 	case "identity.sso.signin-start.oidc-v1", "identity.sso.signin-start.oidc-link-v1":
@@ -58,8 +65,12 @@ func ssoOIDCExplicitLinkSubject(b identity.CommandBinding) (string, bool) {
 }
 
 func ssoIssuancePayload(b identity.CommandBinding, p capability.Payload) bool {
-	// The kernel's oauthRPInitiationGrantSubject fixes the original RP state
-	// lifetime at ten minutes; checkpoint recovery cannot renew that deadline.
+	// The kernel's oauthRPInitiationGrantSubject limits SAML RelayState to five
+	// minutes and OAuth/OIDC state to ten; recovery cannot renew either deadline.
+	maximumLifetime := 10 * time.Minute
+	if b.SchemaID == "identity.sso.saml-start.v1" {
+		maximumLifetime = 5 * time.Minute
+	}
 	purpose := ssoIssuancePurpose(b)
-	return purpose != "" && p.Operation == string(purpose) && p.Resource == b.RecordID && p.CorrelationID == b.CorrelationID && p.IssuedAt.Location() == time.UTC && p.IssuedAt.Nanosecond() == 0 && p.IssuedAt.Unix() > 0 && p.NotBefore.Location() == time.UTC && p.NotBefore.Equal(p.IssuedAt) && p.ExpiresAt.After(p.IssuedAt) && p.ExpiresAt.Sub(p.IssuedAt) <= 10*time.Minute
+	return purpose != "" && p.Operation == string(purpose) && p.Resource == b.RecordID && p.CorrelationID == b.CorrelationID && p.IssuedAt.Location() == time.UTC && p.IssuedAt.Nanosecond() == 0 && p.IssuedAt.Unix() > 0 && p.NotBefore.Location() == time.UTC && p.NotBefore.Equal(p.IssuedAt) && p.ExpiresAt.After(p.IssuedAt) && p.ExpiresAt.Sub(p.IssuedAt) <= maximumLifetime
 }
