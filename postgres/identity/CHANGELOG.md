@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Recover the exact unsolicited SAML arrival's confirmation issuance using
+  fenced absence. Conflicting original, capability or replay evidence remains
+  unknown; other issuance profiles keep their existing rules.
+
 - Reauthenticate the exact pending unsolicited SAML confirmation proof.
   Preserve its original signed recipient, record, replay key and deadline;
   browser verification and the atomic one-use mutation remain native concerns.
