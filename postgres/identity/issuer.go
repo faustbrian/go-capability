@@ -476,11 +476,11 @@ func (i *Issuer) PersistCapabilityIssuance(ctx context.Context, w identitypostgr
 
 // RecoverParticipant reads original issuance evidence under the coordinator's
 // frozen prior generation. Missing, partial or conflicting ordinary/signup
-// rows remain unknown. Selected single-grant recipient and native anonymous-
-// upgrade preparation profiles can prove non-commit only when neither original
-// identity nor replay identity nor any grant of that originating command exists
-// under the coordinator recovery fence. No expiry, timeout or consuming state
-// is rewritten as rollback.
+// rows remain unknown. Selected single-grant recipient, native preparation and
+// SP-generated SAML logout RelayState profiles can prove non-commit only when
+// neither original identity nor replay identity nor any grant of that
+// originating command exists under the coordinator recovery fence. No expiry,
+// timeout or consuming state is rewritten as rollback.
 func (i *Issuer) RecoverParticipant(ctx context.Context, w identitypostgres.RecoveryWork) (identitypostgres.RecoveryStatus, error) {
 	if i == nil || i.service == nil || ctx == nil {
 		return identitypostgres.RecoveryUnknown, invalid()
@@ -516,7 +516,7 @@ func (i *Issuer) RecoverParticipant(ctx context.Context, w identitypostgres.Reco
 			return identitypostgres.RecoveryUnknown, err
 		}
 		if !found {
-			if b.Plan.ResetRecipientUserID != "" || b.Plan.MagicLinkRecipientUserID != "" || b.Plan.MFAContinuationUserID != "" || i.anonymousUpgradeAbsenceProfile(b.Command, b.Plan) || i.organizationInvitationAbsenceProfile(b.Command, b.Plan) || i.samlIDPArrivalAbsenceProfile(b.Command, b.Plan) {
+			if b.Plan.ResetRecipientUserID != "" || b.Plan.MagicLinkRecipientUserID != "" || b.Plan.MFAContinuationUserID != "" || i.anonymousUpgradeAbsenceProfile(b.Command, b.Plan) || i.organizationInvitationAbsenceProfile(b.Command, b.Plan) || i.samlIDPArrivalAbsenceProfile(b.Command, b.Plan) || i.samlLogoutRelayAbsenceProfile(b.Command, b.Plan) {
 				return i.recoverAbsentRecipientIssuance(ctx, w, b.Command, cp)
 			}
 			return identitypostgres.RecoveryUnknown, nil

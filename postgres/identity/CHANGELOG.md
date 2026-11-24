@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Recover the exact original SP-generated SAML logout RelayState issuance using
+  the existing fenced absence proof. A retained original-command, capability or
+  replay identity remains unknown; other issuance profiles retain their rules.
+  No storage, migration or dependency change is required.
+
 - Issue and reauthenticate original SP-generated SAML logout RelayState through
   `PrepareSSOSAMLLogoutRelayConsumption` for the exact self-user remote issue
   command. Require a distinct canonical local-command correlation and preserve
