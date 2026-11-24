@@ -162,6 +162,9 @@ func (i *Issuer) preparePlan(ctx context.Context, b identity.CommandBinding, pla
 		}
 	}()
 	for _, v := range inputs {
+		if !ssoSAMLLogoutRelayPurposeAllowed(b, capability.Purpose(v.Operation)) {
+			return out, invalid()
+		}
 		if ssoIssuanceOperation(b) && !ssoIssuancePayload(b, v) {
 			return out, invalid()
 		}
@@ -302,6 +305,9 @@ func (i *Issuer) ValidateCapabilityIssuance(b identity.CommandBinding, p identit
 		return invalid()
 	}
 	for n, v := range p.Grants {
+		if !ssoSAMLLogoutRelayPurposeAllowed(b, v.Purpose) {
+			return invalid()
+		}
 		if ssoIssuanceOperation(b) && v.Purpose != ssoIssuancePurpose(b) {
 			return invalid()
 		}
@@ -334,6 +340,9 @@ func (i *Issuer) grantSubjectPlan(b identity.CommandBinding, subject string, g c
 	v := g.Payload()
 	digest := g.EnvelopeDigest()
 	key := i.keys[version]
+	if !ssoSAMLLogoutRelayPurposeAllowed(b, capability.Purpose(v.Operation)) {
+		return identitypostgres.CapabilityPlan{}, invalid()
+	}
 	if ssoIssuanceOperation(b) && !ssoIssuancePayload(b, v) {
 		return identitypostgres.CapabilityPlan{}, invalid()
 	}

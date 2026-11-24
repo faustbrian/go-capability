@@ -9,17 +9,31 @@ import (
 	identitypostgres "github.com/faustbrian/go-identity/postgres"
 )
 
-func ssoIssuanceOperation(b identity.CommandBinding) bool {
-	return b.OperationID == "identity.sso.signin-start" || b.OperationID == "identity.sso.saml-start"
+const ssoSAMLLogoutRelaySettlePurpose capability.Purpose = "identity.sso.saml-logout-relay-settle"
+
+// Generic issuance must not manufacture a matching logout settlement grant.
+// All other purposes retain their existing issuance profiles.
+func ssoSAMLLogoutRelayPurposeAllowed(b identity.CommandBinding, purpose capability.Purpose) bool {
+	if purpose != ssoSAMLLogoutRelaySettlePurpose {
+		return true
+	}
+	_, valid := ssoSAMLLogoutRelaySubject(b)
+	return valid
 }
 
-// Match only native enterprise start schemas, not the social OAuth RP profile.
-// Each preserves its original subject namespace and exact callback purpose.
+func ssoIssuanceOperation(b identity.CommandBinding) bool {
+	return b.OperationID == "identity.sso.signin-start" || b.OperationID == "identity.sso.saml-start" || b.OperationID == "identity.sso.saml-logout-relay-issue"
+}
+
+// Match only native enterprise issuance schemas, not the social OAuth RP profile.
+// Each preserves its original subject namespace and exact consumer purpose.
 func ssoIssuanceSubject(b identity.CommandBinding, p identitypostgres.CapabilityIssuancePlan) (string, bool) {
 	if p.RegistrationUserID != "" || p.ResetRecipientUserID != "" || p.MagicLinkRecipientUserID != "" || p.MFAContinuationUserID != "" {
 		return "", false
 	}
 	switch b.SchemaID {
+	case "sso-enterprise-saml-logout-relay-issue-v1":
+		return ssoSAMLLogoutRelaySubject(b)
 	case "identity.sso.saml-start.v1":
 		// Mirror identity/postgres.SSOSAMLSigninStartOperation without changing
 		// the pinned dependency; SAML retains its native operation and ACS purpose.
@@ -39,6 +53,8 @@ func ssoIssuanceSubject(b identity.CommandBinding, p identitypostgres.Capability
 
 func ssoIssuancePurpose(b identity.CommandBinding) capability.Purpose {
 	switch b.SchemaID {
+	case "sso-enterprise-saml-logout-relay-issue-v1":
+		return ssoSAMLLogoutRelaySettlePurpose
 	case "identity.sso.saml-start.v1":
 		return "identity.sso.saml-acs"
 	case "identity.sso.signin-start.oauth2-v1":
@@ -48,6 +64,17 @@ func ssoIssuancePurpose(b identity.CommandBinding) capability.Purpose {
 	default:
 		return ""
 	}
+}
+
+func ssoSAMLLogoutRelaySubject(b identity.CommandBinding) (string, bool) {
+	// Mirror identity/postgres.SSOSAMLLogoutRelayIssueOperation without repinning;
+	// the native owner separately proves the completed local logout and request.
+	op := identity.FeatureOperation{Owner: "sso/saml", OperationID: "identity.sso.saml-logout-relay-issue", SchemaID: "sso-enterprise-saml-logout-relay-issue-v1", SchemaVersion: 1, RecordRequirement: identity.FeatureRecordRequired, SubjectRequirement: identity.FeatureSubjectUser}
+	subject := string(b.UserID)
+	selfActor := b.ActorKind == authorization.SubjectUser && string(b.ActorID) == subject
+	localCommand, err := identity.ParseCommandID(b.CorrelationID)
+	distinctLocalCommand := err == nil && localCommand != b.CommandID
+	return subject, selfActor && distinctLocalCommand && b.AnonymousFlowID == "" && b.RecordID == string(b.CommandID) && b.ValidateFor(op) == nil
 }
 
 func ssoOIDCSigninSubject(b identity.CommandBinding) (string, bool) {
@@ -65,10 +92,11 @@ func ssoOIDCExplicitLinkSubject(b identity.CommandBinding) (string, bool) {
 }
 
 func ssoIssuancePayload(b identity.CommandBinding, p capability.Payload) bool {
-	// The kernel's oauthRPInitiationGrantSubject limits SAML RelayState to five
-	// minutes and OAuth/OIDC state to ten; recovery cannot renew either deadline.
+	// Native SAML sign-in/logout RelayState is limited to five minutes; the
+	// kernel's oauthRPInitiationGrantSubject permits OAuth/OIDC state ten minutes.
+	// Recovery cannot renew either original deadline.
 	maximumLifetime := 10 * time.Minute
-	if b.SchemaID == "identity.sso.saml-start.v1" {
+	if b.SchemaID == "identity.sso.saml-start.v1" || b.SchemaID == "sso-enterprise-saml-logout-relay-issue-v1" {
 		maximumLifetime = 5 * time.Minute
 	}
 	purpose := ssoIssuancePurpose(b)

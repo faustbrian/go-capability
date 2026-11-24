@@ -8,6 +8,33 @@ import (
 	identitypostgres "github.com/faustbrian/go-identity/postgres"
 )
 
+// PrepareSSOSAMLLogoutRelayConsumption reauthenticates original SP-generated
+// logout RelayState for the exact native remote issue command, not the local
+// revocation command or an anonymous sign-in. Its self-user actor, signed user,
+// tenant, issue record, local-command correlation, settle purpose and one-use
+// envelope must match. Correlation identifies a canonical original local command
+// distinct from the remote issue. The whole-second UTC lifetime is at most five
+// minutes and remains exclusive even with verification skew.
+//
+// replayKeyVersion comes from trusted original durable issuance. Preparation
+// borrows the proof concurrently under PreparationTimeout and the earlier
+// caller deadline without signing, SQL, storage, reservation or consumption.
+// The native owner must authenticate the signed logout response and original
+// browser/request context, then use the existing Participant protocol to reserve
+// and consume against durable issuance. A plan itself grants no logout authority.
+//
+// Invalid composition returns InvalidInput; foreign, malformed, transferred or
+// expired proof returns Forbidden; verification uncertainty, an invalid clock
+// or panic returns Unavailable. Cancellation remains classified, diagnostics
+// are redacted and every failure returns a zero plan.
+func (i *Issuer) PrepareSSOSAMLLogoutRelayConsumption(ctx context.Context, originalIssue identity.CommandBinding, proof capability.Proof, replayKeyVersion uint32) (out identitypostgres.CapabilityPlan, err error) {
+	subject, ok := ssoSAMLLogoutRelaySubject(originalIssue)
+	if !ok {
+		return out, invalid()
+	}
+	return i.prepareSSOConsumption(ctx, originalIssue, subject, proof, replayKeyVersion)
+}
+
 // PrepareSSOSAMLSigninConsumption authenticates the original SP-initiated
 // browser's RelayState proof for the exact native SAML start. The original
 // browser flow, tenant, transaction and correlation must match the one-use

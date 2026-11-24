@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Issue and reauthenticate original SP-generated SAML logout RelayState through
+  `PrepareSSOSAMLLogoutRelayConsumption` for the exact self-user remote issue
+  command. Require a distinct canonical local-command correlation and preserve
+  the settle purpose, user, tenant, issue record, signed correlation,
+  retained replay identity and exclusive five-minute deadline without signing
+  or consuming during preparation. Native logout authentication and atomic
+  reservation remain separate; no dependency or storage change is required.
+
 - Recover the exact unsolicited SAML arrival's confirmation issuance using
   fenced absence. Conflicting original, capability or replay evidence remains
   unknown; other issuance profiles keep their existing rules.
