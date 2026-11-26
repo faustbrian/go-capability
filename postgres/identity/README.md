@@ -444,6 +444,25 @@ See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 ## Original issuance
 
+### Native One Tap start
+
+`issuer.Prepare` accepts only `identity.oauth.onetap-start` /
+`oauth-onetap-start-v1` v1 for a service-account actor and an anonymous flow
+whose `RecordID` is exactly its `AnonymousFlowID`. No user, registration,
+recipient, MFA or account-link override is permitted. Prepare exactly one
+non-bearer `identity.oauth.onetap-callback` grant for that flow as both subject
+and resource, the original tenant and exact correlation, the single configured
+audience and `MaxUses: 1`. Supply positive whole-second UTC `IssuedAt`, equal
+UTC `NotBefore`, and whole-second UTC expiry later than issue and no more than
+five minutes after it. Other commands cannot borrow this callback purpose.
+
+The existing encrypted preparation checkpoint preserves the original signed
+grant, replay identity and deadline without repeating proof disclosure. This
+profile performs no SQL and grants no browser, provider, callback, identity or
+session authority; the native owner must still enforce those policies and
+stage issuance through the sole coordinator. No dependency, schema or storage
+change is required.
+
 ### Native OAuth RP starts
 
 `issuer.Prepare` accepts the exact `identity/oauth` RP start bindings:

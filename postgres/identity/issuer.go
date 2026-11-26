@@ -140,7 +140,7 @@ func (i *Issuer) prepare(ctx context.Context, b identity.CommandBinding, registr
 func (i *Issuer) preparePlan(ctx context.Context, b identity.CommandBinding, plan identitypostgres.CapabilityIssuancePlan, inputs []capability.Payload, fixedChallengeID bool) (out PreparedIssuance, err error) {
 	registration, resetRecipient, magicLinkRecipient, mfaSubject := plan.RegistrationUserID, plan.ResetRecipientUserID, plan.MagicLinkRecipientUserID, plan.MFAContinuationUserID
 	subject, valid := issuerPlanSubject(b, plan)
-	if i == nil || i.service == nil || ctx == nil || !valid || len(inputs) == 0 || len(inputs) > 16 || (resetRecipient != "" || magicLinkRecipient != "" || mfaSubject != "" || oauthRPIssuanceOperation(b) || ssoIssuanceOperation(b)) && len(inputs) != 1 || fixedChallengeID != (mfaSubject != "") {
+	if i == nil || i.service == nil || ctx == nil || !valid || len(inputs) == 0 || len(inputs) > 16 || (resetRecipient != "" || magicLinkRecipient != "" || mfaSubject != "" || oauthRPIssuanceOperation(b) || ssoIssuanceOperation(b) || oneTapIssuanceOperation(b)) && len(inputs) != 1 || fixedChallengeID != (mfaSubject != "") {
 		return out, invalid()
 	}
 	ctx, cancel := context.WithTimeout(ctx, i.timeout)
@@ -162,6 +162,9 @@ func (i *Issuer) preparePlan(ctx context.Context, b identity.CommandBinding, pla
 		}
 	}()
 	for _, v := range inputs {
+		if !oneTapIssuancePurposeAllowed(b, capability.Purpose(v.Operation)) || oneTapIssuanceOperation(b) && !oneTapIssuancePayload(b, v) {
+			return out, invalid()
+		}
 		if !ssoSAMLLogoutRelayPurposeAllowed(b, capability.Purpose(v.Operation)) {
 			return out, invalid()
 		}
@@ -301,10 +304,13 @@ func (i *Issuer) Stage(ctx context.Context, w identitypostgres.Work, p PreparedI
 // Exact cryptographic provenance is rederived from Grants in the sealed phase.
 func (i *Issuer) ValidateCapabilityIssuance(b identity.CommandBinding, p identitypostgres.CapabilityIssuancePlan) error {
 	_, valid := issuerPlanSubject(b, p)
-	if i == nil || i.service == nil || !valid || p.Contributor != i.Descriptor() || len(p.Grants) == 0 || len(p.Grants) > 16 || (p.ResetRecipientUserID != "" || p.MagicLinkRecipientUserID != "" || p.MFAContinuationUserID != "" || oauthRPIssuanceOperation(b) || ssoIssuanceOperation(b)) && len(p.Grants) != 1 {
+	if i == nil || i.service == nil || !valid || p.Contributor != i.Descriptor() || len(p.Grants) == 0 || len(p.Grants) > 16 || (p.ResetRecipientUserID != "" || p.MagicLinkRecipientUserID != "" || p.MFAContinuationUserID != "" || oauthRPIssuanceOperation(b) || ssoIssuanceOperation(b) || oneTapIssuanceOperation(b)) && len(p.Grants) != 1 {
 		return invalid()
 	}
 	for n, v := range p.Grants {
+		if !oneTapIssuancePurposeAllowed(b, v.Purpose) || oneTapIssuanceOperation(b) && v.Purpose != oneTapCallbackPurpose {
+			return invalid()
+		}
 		if !ssoSAMLLogoutRelayPurposeAllowed(b, v.Purpose) {
 			return invalid()
 		}
@@ -340,6 +346,9 @@ func (i *Issuer) grantSubjectPlan(b identity.CommandBinding, subject string, g c
 	v := g.Payload()
 	digest := g.EnvelopeDigest()
 	key := i.keys[version]
+	if !oneTapIssuancePurposeAllowed(b, capability.Purpose(v.Operation)) || oneTapIssuanceOperation(b) && !oneTapIssuancePayload(b, v) {
+		return identitypostgres.CapabilityPlan{}, invalid()
+	}
 	if !ssoSAMLLogoutRelayPurposeAllowed(b, capability.Purpose(v.Operation)) {
 		return identitypostgres.CapabilityPlan{}, invalid()
 	}
@@ -587,6 +596,9 @@ func issuerSubject(b identity.CommandBinding, registration identity.UserID) (str
 // Reset selection is not a general anonymous subject override. Keep signup's
 // historical rules intact and bind the independent existing-recipient profile.
 func issuerPlanSubject(b identity.CommandBinding, p identitypostgres.CapabilityIssuancePlan) (string, bool) {
+	if oneTapIssuanceOperation(b) {
+		return oneTapIssuanceSubject(b, p)
+	}
 	if ssoIssuanceOperation(b) {
 		return ssoIssuanceSubject(b, p)
 	}

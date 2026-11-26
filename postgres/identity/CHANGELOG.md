@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Prepare one original One Tap callback grant for the exact anonymous native
+  start schema and service-account actor. Bind the original flow as subject
+  and resource, tenant, correlation, configured audience and five-minute
+  maximum validity; preserve signed custody and replay identity through
+  encrypted checkpoints. Other commands cannot borrow its callback purpose.
+  No callback authority, dependency, migration or storage change is added.
+
 - Recover the exact original SP-generated SAML logout RelayState issuance using
   the existing fenced absence proof. A retained original-command, capability or
   replay identity remains unknown; other issuance profiles retain their rules.
