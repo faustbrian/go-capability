@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Reauthenticate original One Tap callback grants with
+  `PrepareOneTapCallbackConsumption` for the exact anonymous native start and
+  command correlation. Preserve signed scope, one-use envelope, retained replay
+  identity and exclusive five-minute deadline without signing, transfer,
+  reservation or consumption. Authenticated original native binding custody and
+  later durable Participant comparison remain required; no new SQL, participant,
+  dependency or storage is introduced.
+
 - Prepare one original One Tap callback grant for the exact anonymous native
   start schema and service-account actor. Bind the original flow as subject
   and resource, tenant, correlation, configured audience and five-minute

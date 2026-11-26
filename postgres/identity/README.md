@@ -463,6 +463,30 @@ session authority; the native owner must still enforce those policies and
 stage issuance through the sole coordinator. No dependency, schema or storage
 change is required.
 
+`issuer.PrepareOneTapCallbackConsumption(ctx, originalStart, proof,
+originalReplayVersion)` reauthenticates that original grant without signing,
+transferring, reserving, consuming or storing it. Supply the authenticated
+original start binding from native sealed custody, never callback-selected
+fields. The closed consumption profile additionally requires native
+`PrepareRequestKey`'s `CorrelationID == string(CommandID)`, so the signed
+correlation binds that exact original command. The proof binds flow, tenant,
+record, purpose and correlation; it does not independently authenticate an
+arbitrary service-account actor ID. Signed use restrictions must authorize the
+exact configured scope; unknown required caveats fail closed. The original
+five-minute maximum and exclusive signed expiry apply even with verifier skew.
+
+Select the replay-key version only from original durable issuance and retain
+that key for recovery; the current issuance default cannot replace it. The
+returned metadata must still match durable issuance through the existing
+Participant, which alone owns later reservation, consumption and recovery.
+Browser, CSRF, nonce, Google credential, provider, identity and session policy
+remain native-owner checks. OAuth and SSO starts cannot select this profile.
+Calls may overlap, borrow proof custody and obey `PreparationTimeout` and the
+earlier caller deadline. Invalid composition is `InvalidInput`; foreign,
+expired or revoked proof is `Forbidden`; verification uncertainty or panic is
+`Unavailable`. Cancellation remains classified and every failure returns zero
+metadata. No new participant, SQL, dependency or storage is introduced.
+
 ### Native OAuth RP starts
 
 `issuer.Prepare` accepts the exact `identity/oauth` RP start bindings:
