@@ -24,6 +24,14 @@ consumed/other-target history and all reservation/origin metadata. Live
 unclassified legacy grants deny removal, never guess targets or bulk-retire a
 subject. Propagate every error to roll back the complete protected mutation.
 
+`RetireOAuthProxyOriginGrant` uses the existing grant primary key and exact
+tenant, purpose, origin and flow. Call only in the native proxy retirement
+Apply, with the authenticated, retained original issuance locator. It revokes
+unused issued or reserved grants without changing command or reservation
+evidence. Known terminal grants are unchanged; missing or mismatched grants
+deny. The transaction owner must propagate errors and cannot interpret this
+result as settlement of an uncertain provider exchange.
+
 Optional Go 1.27 module implementing capability-owned reservation and recovery
 through the sole identity PostgreSQL Coordinator. This is a storage adapter,
 not a workflow, signing service or independently committable store.

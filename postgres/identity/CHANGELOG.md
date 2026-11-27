@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Retire the exact unused OAuth proxy grant in native retirement Apply by
+  its original issuance locator, conserving terminal and reservation evidence.
+
 - Prepare one original proxy-forward state grant through the existing issuer
   only for the closed anonymous native proxy-start profile. Bind the canonical
   transaction, start-command correlation, exact signed digest caveat and
