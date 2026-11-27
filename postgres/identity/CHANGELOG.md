@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Prepare one original proxy-forward state grant through the existing issuer
+  only for the closed anonymous native proxy-start profile. Bind the canonical
+  transaction, start-command correlation, exact signed digest caveat and
+  five-minute maximum validity; preserve original signed custody and retained
+  replay identity through checkpoints and restoration. Other issuance channels
+  cannot borrow the proxy purpose. No dependency, storage, replay owner or
+  callback-authority change is introduced.
+
 - Reauthenticate original OAuth proxy-forward state through
   `PrepareOAuthProxyForwardConsumption` for the exact anonymous native callback,
   canonical initiating command and signed binding digest. Preserve original

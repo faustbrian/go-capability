@@ -38,6 +38,26 @@ only to its own consumption tables, never this adapter's identity tables.
 
 ## Quick start and API
 
+`Issuer.Prepare` accepts exactly one `identity.oauth.proxy-forward` grant only
+for `identity.oauth.proxy-start` / `identity.oauth.proxy-start.native-v1` v1.
+The service-account actor and canonical anonymous transaction as both subject
+and record must match. Correlation is the start's own canonical command ID,
+distinct from the anonymous transaction; the later callback has its own command.
+Registration, reset, magic-link and MFA recipient overrides cannot select this
+profile. The non-bearer one-use grant binds the tenant, anonymous subject,
+resource, origin correlation and sole configured audience; exactly one
+`identity.oauth.proxy.binding` caveat contains a canonical raw-URL-base64 nonzero
+32-byte digest. Its explicit UTC-second validity is at most five minutes, with
+not-before equal to issued-at. Other issuance channels cannot borrow the forward
+purpose.
+
+The existing preparation, validation, checkpoint, restoration and staging paths
+preserve the original signed bytes, expiry and retained replay identity without
+renewed disclosure. The native kernel must authenticate the original request
+and tie the signed digest to its exact generated command and encrypted intent
+before staging in the sole coordinator. Issuance does not grant callback,
+provider, account or session authority and introduces no separate replay owner.
+
 `PrepareOAuthProxyForwardConsumption(ctx, callback, origin, bindingDigest, proof,
 originalReplayVersion)` reauthenticates original proxy state only for the closed
 anonymous `identity.oauth.proxy-forward.native-v1` callback. Supply the complete
