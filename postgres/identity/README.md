@@ -38,6 +38,24 @@ only to its own consumption tables, never this adapter's identity tables.
 
 ## Quick start and API
 
+`PrepareOAuthProxyForwardConsumption(ctx, callback, origin, bindingDigest, proof,
+originalReplayVersion)` reauthenticates original proxy state only for the closed
+anonymous `identity.oauth.proxy-forward.native-v1` callback. Supply the complete
+callback binding, distinct canonical initiating command, binding digest and
+retained replay version from authenticated original native custody. The service
+actor is structurally validated; the flow equals the record, and callback and
+signed correlations equal the origin. Exactly one signed
+`identity.oauth.proxy.binding` caveat carries the raw-URL-base64 digest. Tenant,
+flow, resource, proxy purpose, sole audience, non-bearer one-use policy and the
+original five-minute UTC-second lifetime must match, without skew extension.
+
+Preparation borrows proof custody concurrently without signing, SQL, transfer,
+reservation, consumption or renewal. The existing `Participant` must still
+compare original durable issuance and atomically reserve/consume/recover state.
+The native proxy owner separately authenticates original environment, provider,
+browser and current policy. A plan grants no exchange, account or session
+authority; this seam does not issue proxy grants or forward provider credentials.
+
 `PrepareAnonymousUpgradeConsumption` reauthenticates the original signed proof
 for `identity.anonymous.upgrade` / `identity.anonymous.upgrade.native-v1` v1.
 The user actor and subject are the permanent target; the distinct record is the

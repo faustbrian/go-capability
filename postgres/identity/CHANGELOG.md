@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Reauthenticate original OAuth proxy-forward state through
+  `PrepareOAuthProxyForwardConsumption` for the exact anonymous native callback,
+  canonical initiating command and signed binding digest. Preserve original
+  one-use proof custody, retained replay identity and the exclusive five-minute
+  deadline without signing, SQL, transfer, reservation or consumption. The
+  existing Participant remains the durable reservation and recovery owner;
+  no issuance, dependency, storage or provider authority is introduced.
+
 - Reauthenticate original One Tap callback grants with
   `PrepareOneTapCallbackConsumption` for the exact anonymous native start and
   command correlation. Preserve signed scope, one-use envelope, retained replay
