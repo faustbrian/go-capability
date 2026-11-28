@@ -32,6 +32,13 @@ evidence. Known terminal grants are unchanged; missing or mismatched grants
 deny. The transaction owner must propagate errors and cannot interpret this
 result as settlement of an uncertain provider exchange.
 
+`ConfirmOAuthProxyOriginGrantTerminal` uses the same native Work and exact
+issuance locator but only reads it. It accepts revoked or known settled
+states, and denies missing, mismatched, issued or reserved grants without a
+write or row lock. It cannot prove custody erasure or the outcome of a
+different command; the owning retirement workflow must establish those
+separately.
+
 Optional Go 1.27 module implementing capability-owned reservation and recovery
 through the sole identity PostgreSQL Coordinator. This is a storage adapter,
 not a workflow, signing service or independently committable store.

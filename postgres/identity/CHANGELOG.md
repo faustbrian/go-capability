@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Confirm that an exact original OAuth proxy grant is already terminal
+  without locking or mutating it, within its native retirement Work.
+
 - Retire the exact unused OAuth proxy grant in native retirement Apply by
   its original issuance locator, conserving terminal and reservation evidence.
 
