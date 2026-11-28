@@ -192,7 +192,11 @@ func TestSSOBreakGlassIssuerRejectsSignedBroaderGrantOnReplay(t *testing.T) {
 			if err != nil {
 				t.Fatal("cryptographic fixture could not sign structurally valid broader payload", err)
 			}
-			defer proof.Transfer(context.Background(), func(context.Context, []byte) error { return nil })
+			t.Cleanup(func() {
+				if err := proof.Transfer(context.Background(), func(context.Context, []byte) error { return nil }); err != nil {
+					t.Error("release test proof custody", err)
+				}
+			})
 			grant, err := i.service.Verify(context.Background(), proof, "identity.sso.break-glass.consume", "identity.sso.break-glass")
 			if err != nil {
 				t.Fatal("broader signed fixture did not authenticate", err)
