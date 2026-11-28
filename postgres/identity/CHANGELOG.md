@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Prepare one signed SSO emergency-recovery grant for the named recipient,
+  exact organization and enforcement revision. Its dedicated purpose is
+  unavailable through generic issuers; restoring custody cannot disclose the
+  credential again. Preparation does not authorize or deliver recovery access.
+
 - Confirm that an exact original OAuth proxy grant is already terminal
   without locking or mutating it, within its native retirement Work.
 

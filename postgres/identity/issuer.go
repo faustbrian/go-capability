@@ -138,9 +138,16 @@ func (i *Issuer) prepare(ctx context.Context, b identity.CommandBinding, registr
 }
 
 func (i *Issuer) preparePlan(ctx context.Context, b identity.CommandBinding, plan identitypostgres.CapabilityIssuancePlan, inputs []capability.Payload, fixedChallengeID bool) (out PreparedIssuance, err error) {
+	return i.prepareSelectedPlan(ctx, b, plan, inputs, fixedChallengeID, false)
+}
+
+func (i *Issuer) prepareSelectedPlan(ctx context.Context, b identity.CommandBinding, plan identitypostgres.CapabilityIssuancePlan, inputs []capability.Payload, fixedChallengeID, breakGlass bool) (out PreparedIssuance, err error) {
 	registration, resetRecipient, magicLinkRecipient, mfaSubject := plan.RegistrationUserID, plan.ResetRecipientUserID, plan.MagicLinkRecipientUserID, plan.MFAContinuationUserID
 	subject, valid := issuerPlanSubject(b, plan)
 	if i == nil || i.service == nil || ctx == nil || !valid || len(inputs) == 0 || len(inputs) > 16 || (resetRecipient != "" || magicLinkRecipient != "" || mfaSubject != "" || oauthRPIssuanceOperation(b) || ssoIssuanceOperation(b) || oneTapIssuanceOperation(b) || oauthProxyStartIssuanceOperation(b)) && len(inputs) != 1 || fixedChallengeID != (mfaSubject != "") {
+		return out, invalid()
+	}
+	if breakGlass != ssoBreakGlassSelected(b) || breakGlass && (i.audience != ssoBreakGlassAudience || len(inputs) != 1) {
 		return out, invalid()
 	}
 	ctx, cancel := context.WithTimeout(ctx, i.timeout)
@@ -162,6 +169,9 @@ func (i *Issuer) preparePlan(ctx context.Context, b identity.CommandBinding, pla
 		}
 	}()
 	for _, v := range inputs {
+		if !ssoBreakGlassPurposeAllowed(b, capability.Purpose(v.Operation)) || ssoBreakGlassSelected(b) && !ssoBreakGlassPayload(b, v) {
+			return out, invalid()
+		}
 		if !oauthProxyStartIssuancePurposeAllowed(b, capability.Purpose(v.Operation)) || oauthProxyStartIssuanceOperation(b) && !oauthProxyStartIssuancePayload(b, v) {
 			return out, invalid()
 		}
@@ -295,7 +305,14 @@ func (i *Issuer) Stage(ctx context.Context, w identitypostgres.Work, p PreparedI
 	if b != p.state.binding {
 		return invalid()
 	}
-	for index, grant := range p.state.grants {
+	grants := p.state.grants
+	if ssoBreakGlassSelected(b) {
+		grants, err = p.Grants()
+		if err != nil {
+			return err
+		}
+	}
+	for index, grant := range grants {
 		if err := w.StageCapabilityIssuanceFor(i, uint16(index), grant); err != nil {
 			return err
 		}
@@ -310,7 +327,13 @@ func (i *Issuer) ValidateCapabilityIssuance(b identity.CommandBinding, p identit
 	if i == nil || i.service == nil || !valid || p.Contributor != i.Descriptor() || len(p.Grants) == 0 || len(p.Grants) > 16 || (p.ResetRecipientUserID != "" || p.MagicLinkRecipientUserID != "" || p.MFAContinuationUserID != "" || oauthRPIssuanceOperation(b) || ssoIssuanceOperation(b) || oneTapIssuanceOperation(b) || oauthProxyStartIssuanceOperation(b)) && len(p.Grants) != 1 {
 		return invalid()
 	}
+	if ssoBreakGlassSelected(b) && (i.audience != ssoBreakGlassAudience || len(p.Grants) != 1) {
+		return invalid()
+	}
 	for n, v := range p.Grants {
+		if !ssoBreakGlassPurposeAllowed(b, v.Purpose) {
+			return invalid()
+		}
 		if !oauthProxyStartIssuancePurposeAllowed(b, v.Purpose) || oauthProxyStartIssuanceOperation(b) && v.Purpose != oauthProxyForwardPurpose {
 			return invalid()
 		}
@@ -352,6 +375,9 @@ func (i *Issuer) grantSubjectPlan(b identity.CommandBinding, subject string, g c
 	v := g.Payload()
 	digest := g.EnvelopeDigest()
 	key := i.keys[version]
+	if !ssoBreakGlassPurposeAllowed(b, capability.Purpose(v.Operation)) || ssoBreakGlassSelected(b) && !ssoBreakGlassPayload(b, v) {
+		return identitypostgres.CapabilityPlan{}, invalid()
+	}
 	if oauthProxyStartIssuanceOperation(b) && !oauthProxyStartIssuancePayload(b, v) {
 		return identitypostgres.CapabilityPlan{}, invalid()
 	}
@@ -605,6 +631,9 @@ func issuerSubject(b identity.CommandBinding, registration identity.UserID) (str
 // Reset selection is not a general anonymous subject override. Keep signup's
 // historical rules intact and bind the independent existing-recipient profile.
 func issuerPlanSubject(b identity.CommandBinding, p identitypostgres.CapabilityIssuancePlan) (string, bool) {
+	if ssoBreakGlassSelected(b) {
+		return ssoBreakGlassSubject(b, p)
+	}
 	if oauthProxyStartIssuanceOperation(b) {
 		return oauthProxyStartIssuanceSubject(b, p)
 	}
